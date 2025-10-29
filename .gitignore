@@ -120,6 +120,22 @@ dmypy.json
 
 # Ignored files
 
+
+
 *.pdf
 
+
+
 annotated_images/
+
+
+
+*.swo
+
+
+
+*.swp
+
+
+
+
