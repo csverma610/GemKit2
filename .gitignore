@@ -113,4 +113,13 @@ venv.bak/
 dmypy.json
 
 # Pyre type checker
+
 .pyre/
+
+
+
+# Ignored files
+
+*.pdf
+
+annotated_images/
