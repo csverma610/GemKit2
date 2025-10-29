@@ -1,0 +1,98 @@
+import logging
+import argparse
+import os
+from typing import List
+from google import genai
+from google.genai.errors import APIError
+from PIL import Image
+from image_source import ImageSource, SourceConfig, OutputType
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class ObjectVisibilityChecker:
+    """
+    Uses the Gemini model to classify if an object in a sub-image is fully visible.
+    """
+    def __init__(self, model_name: str = "gemini-2.5-flash"):
+        """
+        Initializes the ObjectVisibilityChecker.
+
+        Args:
+            model_name: The name of the Gemini model to use.
+        """
+        if not model_name:
+            raise ValueError("A valid Gemini model name must be provided.")
+        
+        self.client = self._create_client()
+        self.model_name = model_name
+
+    def _create_client(self) -> genai.Client:
+        """Creates and configures the Gemini client."""
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable not set.")
+        return genai.Client(api_key=api_key)
+
+    def _create_prompt(self, object_name: str) -> str:
+        """Creates the prompt for the Gemini model."""
+        return (
+            f"Analyze this image. Is the {object_name} in this image completely visible, "
+            "or is it partially cut off, occluded, or hidden behind another object? "
+            "Answer with only 'yes' for fully visible or 'no' for partially visible."
+        )
+
+    def _create_payload(self, prompt: str, image_path: str) -> List:
+        """Loads the image and creates the payload for the Gemini model."""
+        config = SourceConfig(output_type=OutputType.PIL)
+        image_source = ImageSource(image_path, config)
+        image_result = image_source.get_image()
+        image = image_result.data
+        return [prompt, image]
+
+    def is_fully_visible(self, image_path: str, object_name: str) -> bool:
+        """
+        Queries the Gemini model to determine if the specified object in the image is fully visible.
+        
+        Args:
+            image_path: The path or URL to the image file.
+            object_name: The name of the object to check for visibility.
+        """
+        try:
+            prompt = self._create_prompt(object_name)
+            payload = self._create_payload(prompt, image_path)
+
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=payload
+            )
+            model_response = response.text.strip().lower()
+            return 'yes' in model_response
+        except APIError as e:
+            logger.error(f"Gemini API error during visibility check: {e}")
+            return False # Default to False on error
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during visibility check: {e}")
+            return False # Default to False on error
+
+def main():
+    """
+    Main function to run the ObjectVisibilityChecker from the command line.
+    """
+    parser = argparse.ArgumentParser(description="Check if an object in an image is fully visible.")
+    parser.add_argument("-i", "--image_path", required=True, help="Path or URL to the image file.")
+    parser.add_argument("-o", "--object_name", required=True, help="Name of the object to check for visibility.")
+    parser.add_argument("-m", "--model_name", default="gemini-2.5-flash", help="Name of the Gemini model to use.")
+    args = parser.parse_args()
+
+    try:
+        checker = ObjectVisibilityChecker(model_name=args.model_name)
+        is_visible = checker.is_fully_visible(args.image_path, args.object_name)
+        print(f"Is the '{args.object_name}' fully visible? {'Yes' if is_visible else 'No'}")
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    main()

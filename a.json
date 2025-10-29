@@ -1,0 +1,308 @@
+{
+  "metadata": {
+    "title": "Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models",
+    "authors": [
+      "Qizheng Zhang",
+      "Changran Hu",
+      "Shubhangi Upasani",
+      "Boyuan Ma",
+      "Fenglu Hong",
+      "Vamsidhar Kamanuru",
+      "Jay Rainton",
+      "Chen Wu",
+      "Mengmeng Ji",
+      "Hanchen Li",
+      "Urmish Thakker",
+      "James Zou",
+      "Kunle Olukotun"
+    ],
+    "abstract": "Large language model (LLM) applications such as agents and domain-specific reasoning increasingly rely on context adaptation—modifying inputs with instructions, strategies, or evidence, rather than weight updates. Prior approaches improve usability but often suffer from brevity bias, which drops domain insights for concise summaries, and from context collapse, where iterative rewriting erodes details over time. Building on the adaptive memory introduced by Dynamic Cheatsheet, we introduce ACE (Agentic Context Engineering), a framework that treats contexts as evolving playbooks that accumulate, refine, and organize strategies through a modular process of generation, reflection, and curation. ACE prevents collapse with structured, incremental updates that preserve detailed knowledge and scale with long-context models. Across agent and domain-specific benchmarks, ACE optimizes contexts both offline (e.g., system prompts) and online (e.g., agent memory), consistently outperforming strong baselines: +10.6% on agents and +8.6% on finance, while significantly reducing adaptation latency and rollout cost. Notably, ACE could adapt effectively without labeled supervision and instead by leveraging natural execution feedback. On the AppWorld leaderboard, ACE matches the top-ranked production-level agent on the overall average and surpasses it on the harder test-challenge split, despite using a smaller open-source model. These results show that comprehensive, evolving contexts enable scalable, efficient, and self-improving LLM systems with low overhead.",
+    "keywords": [
+      "LLM agents",
+      "context adaptation",
+      "self-improving LLMs",
+      "dynamic contexts",
+      "prompt engineering",
+      "financial analysis"
+    ],
+    "field_of_study": "Artificial Intelligence (AI), Natural Language Processing (NLP), Machine Learning (ML)",
+    "paper_type": "research"
+  },
+  "executive_summary": {
+    "summary": "This paper introduces Agentic Context Engineering (ACE), a novel framework for dynamic context adaptation in large language models. ACE addresses limitations like brevity bias and context collapse in existing methods by treating contexts as 'evolving playbooks' through a modular process of generation, reflection, and curation. The framework demonstrates significant performance gains (over 10% on agents, over 8% on finance) and substantial efficiency improvements (e.g., 82.3% reduction in adaptation latency) over strong baselines. ACE's ability to learn without labeled supervision and its competitive performance against larger models highlight its potential for scalable, efficient, and self-improving LLM systems."
+  },
+  "methodology": {
+    "rating": "excellent",
+    "soundness": "The ACE framework is well-designed to address the limitations of brevity bias and context collapse in LLM context adaptation. Its modular architecture with Generator, Reflector, and Curator roles provides a sound approach to accumulating, refining, and organizing strategies, as described in Section 3 and Figure 4.",
+    "experimental_design": "The experimental design is comprehensive, evaluating ACE on two distinct categories: multi-turn reasoning agents (AppWorld benchmark) and domain-specific benchmarks (FiNER and Formula for financial analysis), as detailed in Section 4.1. The use of multiple baselines (ICL, MIPROv2, GEPA, DC) for both offline and online adaptation strengthens the comparative analysis. Ablation studies (Table 3) further demonstrate the contribution of individual design choices.",
+    "statistical_rigor": "The statistical rigor is good. The paper reports average gains and explicitly mentions the range of improvements, e.g., '+10.6% on agents and +8.6% on finance' (Abstract, Page 1). Ablation studies in Table 3 systematically evaluate component contributions. However, the exact statistical significance (p-values) for all reported gains is not explicitly stated beyond percentage improvements, which would further strengthen the claims.",
+    "reproducibility": "Reproducibility is well-supported. The paper provides detailed descriptions of the ACE framework components (Section 3), task and dataset specifications (Section 4.1), baselines and methods used (Section 4.2), and crucially, includes the language model prompts in Appendix D (Figures 6-14). This level of detail is commendable and should allow researchers to replicate the work.",
+    "strengths": [
+      "The modular architecture of Generator, Reflector, and Curator provides a clear and effective division of labor for context adaptation, as illustrated in Figure 4.",
+      "The incremental delta updates and grow-and-refine mechanism effectively prevent context collapse and preserve detailed knowledge over time, a significant improvement over prior methods (Section 3.1, 3.2).",
+      "The framework's ability to operate effectively without labeled supervision, leveraging natural execution feedback, is a key strength for self-improving agents (Section 2, Page 2).",
+      "The paper demonstrates strong efficiency gains, significantly reducing adaptation latency, rollouts, and token costs compared to baselines (Table 4, Section 4.6)."
+    ],
+    "weaknesses": [
+      "The paper acknowledges a potential limitation: ACE's reliance on a reasonably strong Reflector, where a weak Reflector could lead to noisy or harmful contexts (Section B, Page 14).",
+      "The effectiveness of ACE can degrade when ground-truth supervision or reliable execution signals are absent, especially in domain-specific tasks, which highlights a dependency on feedback quality (Section 4.4, Page 8)."
+    ]
+  },
+  "novelty": {
+    "rating": "excellent",
+    "originality": "The ACE framework introduces a novel approach to context adaptation by treating contexts as 'evolving playbooks' that accumulate, refine, and organize strategies through a modular generation, reflection, and curation process. This is distinct from prior methods that often suffer from brevity bias and context collapse (Section 2.2).",
+    "significance": "The significance is high. ACE addresses fundamental limitations in current LLM context adaptation, offering a scalable, efficient, and self-improving paradigm. Its ability to outperform strong baselines while using smaller models and reducing costs has practical implications for developing more robust AI systems (Abstract, Section 4).",
+    "incremental_vs_breakthrough": "ACE represents a breakthrough in context engineering for LLMs. It moves beyond incremental improvements by fundamentally re-conceptualizing how contexts are managed, specifically by preventing collapse and enabling continuous, structured growth of knowledge (Section 3).",
+    "comparison_to_prior_work": "The paper provides a thorough comparison to prior work, including ICL, MIPROv2, GEPA, and Dynamic Cheatsheet, clearly outlining how ACE overcomes their limitations, particularly brevity bias and context collapse, as discussed in Section 2.2 and quantitatively shown in Tables 1 and 2."
+  },
+  "writing": {
+    "rating": "excellent",
+    "clarity": "The paper is exceptionally clear. Concepts like brevity bias, context collapse, and the ACE framework's components are explained with precision. The workflow in Figure 4 is easy to follow, and the explanations of experimental setups are lucid.",
+    "organization": "The organization is excellent. The paper logically progresses from problem definition (Section 2), to proposed solution (Section 3), detailed experiments and results (Section 4), and a discussion of implications and limitations (Section 5, Appendix B). The use of headings and subheadings is consistent and helpful.",
+    "grammar_and_style": "The grammar and style are professional and polished throughout. The language is academic yet accessible, with no noticeable grammatical errors or awkward phrasing. The tone is objective and informative.",
+    "suggestions": [
+      "Ensure all acronyms are defined at their first appearance; for example, 'KV cache' is used in Section 2.1 before its full form is given (although it is a common term).",
+      "Consider adding a brief summary paragraph at the end of Section 3, following the detailed descriptions of innovations, to reinforce the key takeaways before moving to results."
+    ]
+  },
+  "visual_elements": {
+    "overall_rating": "excellent",
+    "all_elements": [
+      {
+        "element_type": "figure",
+        "elements": [
+          {
+            "element_id": "Figure 1",
+            "caption": "Overall Performance Results. Our proposed framework, ACE, consistently outperforms strong baselines across agent and domain-specific reasoning tasks.",
+            "element_type": "figure",
+            "rating": "excellent",
+            "clarity": "The bar charts are highly clear, with distinct colors, labels for axes (Accuracy (%)) and methods, and numerical values shown for each bar, making comparisons straightforward.",
+            "relevance": "Highly relevant. This figure immediately demonstrates ACE's superior performance across multiple benchmarks, serving as a powerful visual summary of the paper's main claim.",
+            "caption_quality": "The caption is concise, informative, and accurately describes the content and significance of the figure.",
+            "technical_assessment": "The choice of bar charts is appropriate for comparing discrete performance metrics. The presentation of results for three distinct domains effectively highlights the broad applicability of ACE.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          },
+          {
+            "element_id": "Figure 2",
+            "caption": "Context Collapse. Monolithic rewriting of context by an LLM can collapse it into shorter, less informative summaries, leading to sharp performance drops.",
+            "element_type": "figure",
+            "rating": "excellent",
+            "clarity": "The line graph clearly illustrates the phenomenon of context collapse, showing the sharp decline in both token count and accuracy over adaptation steps. The two distinct lines are easily distinguishable and well-labeled.",
+            "relevance": "Crucially relevant. This figure visualizes one of the key problems that ACE is designed to solve, making the motivation for the framework very compelling.",
+            "caption_quality": "The caption is clear and effectively explains the issue depicted, directly linking the monolithic rewriting to performance drops.",
+            "technical_assessment": "The use of two Y-axes for different units (# Tokens and Accuracy) is effective in showing their co-variation and the negative impact of context collapse.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          },
+          {
+            "element_id": "Figure 3",
+            "caption": "Example ACE-Generated Context on the AppWorld Benchmark (partially shown). ACE-generated contexts contain detailed, domain-specific insights along with tools and code that are readily usable, serving as a comprehensive playbook for LLM applications.",
+            "element_type": "figure",
+            "rating": "excellent",
+            "clarity": "The figure clearly presents the structured nature of ACE-generated contexts with distinct sections like 'STRATEGIES AND HARD RULES', 'USEFUL CODE SNIPPETS AND TEMPLATES', and 'TROUBLESHOOTING AND PITFALLS'. The content within each section is readable and demonstrates specificity.",
+            "relevance": "Highly relevant. This figure provides a concrete example of the 'evolving playbook' concept, showing how detailed, usable insights are structured and stored, which is central to ACE's methodology.",
+            "caption_quality": "The caption is descriptive and accurately conveys the purpose and benefits of the displayed example context.",
+            "technical_assessment": "The inclusion of specific code snippets and examples of rules makes the figure very informative for understanding the practical output of ACE.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          },
+          {
+            "element_id": "Figure 4",
+            "caption": "The ACE Framework. Inspired by Dynamic Cheatsheet, ACE adopts an agentic architecture with three specialized components: a Generator, a Reflector, and a Curator.",
+            "element_type": "figure",
+            "rating": "excellent",
+            "clarity": "The diagram is exceptionally clear, depicting the iterative refinement workflow of the ACE framework with distinct components (Generator, Reflector, Curator) and data flows (Query, Trajectory, Insights, Delta Context Items, Context Playbook). The 'Iterative Refinement' loop is well-indicated.",
+            "relevance": "Extremely relevant. This figure is the core conceptual diagram for the entire ACE framework, essential for understanding its modular design and operational flow.",
+            "caption_quality": "The caption is precise, identifying the key components and their inspiration, effectively summarizing the framework's structure.",
+            "technical_assessment": "The use of arrows and distinct boxes makes the flow easily understandable. The labels are clear and concise, contributing to the overall clarity of the complex process.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          },
+          {
+            "element_id": "Figure 5",
+            "caption": "The AppWorld leaderboard as accessed on 09/20/2025.",
+            "element_type": "figure",
+            "rating": "good",
+            "clarity": "The screenshot of the leaderboard is clear and legible. The ranking of different methods with their respective TGC and SGC scores is easy to understand. However, the exact position of ACE is not highlighted.",
+            "relevance": "Relevant as it supports the claim that ACE matches top-ranked agents. It provides external validation of the performance claims made in Section 4.3.",
+            "caption_quality": "The caption is brief and accurate, stating the source and access date.",
+            "technical_assessment": null,
+            "format_assessment": null,
+            "issues": [
+              "The row corresponding to ACE's performance (ReAct + ACE) is not highlighted in Figure 5, making it less immediate for the reader to identify its competitive position."
+            ],
+            "suggestions": [
+              "Highlight the row corresponding to ACE's performance (ReAct + ACE) in Figure 5 to make its competitive position immediately obvious to the reader."
+            ]
+          },
+          {
+            "element_id": "Figures 6-14",
+            "caption": "ICL-baseline Generator prompt on AppWorld; Dynamic Cheatsheet Generator prompt on AppWorld; GEPA prompt on AppWorld; ACE Generator prompt on AppWorld; ACE Reflector prompt on AppWorld; ACE Curator prompt on AppWorld; ACE Generator prompt on FINER; ACE Reflector prompt on FINER; ACE Curator prompt on FINER.",
+            "element_type": "figure",
+            "rating": "excellent",
+            "clarity": "The prompt examples are presented as raw text, which is inherently clear for code and instructions. The structure of the prompts is well-defined.",
+            "relevance": "Extremely relevant for reproducibility, as they provide the exact instructions and templates used for the LLM components. This transparency is a significant strength.",
+            "caption_quality": "Each caption clearly identifies the prompt's purpose and the framework/baseline it belongs to.",
+            "technical_assessment": "The inclusion of these detailed prompts in the appendix is a best practice for research transparency and allows for deeper understanding of the experimental setup.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          }
+        ],
+        "overall_rating": null,
+        "consistency_assessment": null,
+        "global_suggestions": []
+      },
+      {
+        "element_type": "table",
+        "elements": [
+          {
+            "element_id": "Table 1",
+            "caption": "Results on the AppWorld Agent Benchmark. 'GT labels' indicates whether ground-truth labels are available to the Reflector during adaptation. We evaluate the ACE framework against multiple baselines on top of the official ReAct implementation, both for offline and online context adaptation. ReAct + ACE outperforms selected baselines by an average of 10.6%, and could achieve good performance even without access to GT labels.",
+            "element_type": "table",
+            "rating": "excellent",
+            "clarity": "The table is very clear, presenting a well-organized comparison of methods, GT Labels, and performance metrics (TGC, SGC, Average) for both test-normal and test-challenge splits. Percentage increases are clearly indicated.",
+            "relevance": "Highly relevant. This table provides the primary quantitative evidence for ACE's superior performance on agent benchmarks, supporting the claims made in the abstract and results section.",
+            "caption_quality": "The caption is detailed, explaining the table's contents, the 'GT labels' column, and summarizing the key findings, which aids in interpretation.",
+            "technical_assessment": "The use of 'DeepSeek-V3.1 as Base LLM' clearly establishes the experimental setting. The division into offline and online adaptation is also well-structured. The inclusion of the baseline 'ReAct' without any adaptation provides a crucial reference point.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          },
+          {
+            "element_id": "Table 2",
+            "caption": "Results on Financial Analysis Benchmark. 'GT labels' indicates whether ground-truth labels are available to the Reflector during adaptation. With GT labels, ACE outperforms selected baselines by an average of 8.6%, highlighting the advantage of structured and evolving contexts for domain-specific reasoning. However, we also observe that in the absence of reliable feedback signals (e.g., ground-truth labels or execution outcomes), both ACE and other adaptive methods such as Dynamic Cheatsheet may degrade, suggesting that context adaptation depends critically on feedback quality.",
+            "element_type": "table",
+            "rating": "excellent",
+            "clarity": "The table is clear and well-structured, comparing methods, GT Labels, and accuracy for FINER, Formula, and their average. The performance changes are clearly indicated.",
+            "relevance": "Highly relevant. This table provides quantitative evidence for ACE's performance on domain-specific reasoning tasks, complementing the agent benchmark results.",
+            "caption_quality": "The caption is comprehensive, explaining the table's context, the meaning of 'GT labels', summarizing key findings, and importantly, highlighting a limitation regarding feedback quality.",
+            "technical_assessment": "Similar to Table 1, the explicit use of 'DeepSeek-V3.1 as Base LLM' and clear differentiation between offline and online adaptation contributes to the table's utility and transparency.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          },
+          {
+            "element_id": "Table 3",
+            "caption": "Ablation Studies on AppWorld. We study how particular design choices of ACE (iterative refinement, multi-epoch adaptation, and offline warmup) could help high-quality context adaptation.",
+            "element_type": "table",
+            "rating": "good",
+            "clarity": "The table is generally clear, showing the impact of removing different ACE components on performance metrics. The percentage changes are useful for quick assessment.",
+            "relevance": "Highly relevant. This table provides crucial evidence for the effectiveness of ACE's individual design choices, supporting the methodological claims.",
+            "caption_quality": "The caption clearly states the purpose of the ablation study and the design choices being investigated.",
+            "technical_assessment": "The structure allows for direct comparison of each variant against the full ACE framework. However, the order of columns (TGC, SGC) is switched compared to Table 1 and 2 in the test-challenge section, which could be a minor source of confusion. Also, using the same 'ReAct + ACE' entry for both the X and not X cases for 'offline warmup' makes it a bit ambiguous; it would be clearer if the 'X' row was explicitly labeled 'ReAct + ACE w/o offline warmup'.",
+            "format_assessment": null,
+            "issues": [
+              "In Table 3, the column order for 'TGC' and 'SGC' under 'Test-Challenge' is swapped compared to Tables 1 and 2, which could cause minor confusion. Ensure consistent ordering across tables.",
+              "For Table 3, the row 'ReAct + ACE' under 'Online Adaptation' is shown both with and without an 'X' for 'GT Labels'. While the 'X' denotes 'without GT Labels' as per the column header, explicitly stating 'ReAct + ACE w/o offline warmup' or similar for the second row would enhance clarity."
+            ],
+            "suggestions": []
+          },
+          {
+            "element_id": "Table 4",
+            "caption": "Cost and Speed Analysis. We measure the context adaptation latency, number of rollouts, and dollar costs of ACE against GEPA (offline) and DC (online).",
+            "element_type": "table",
+            "rating": "excellent",
+            "clarity": "The table is very clear, concisely presenting the efficiency metrics (Latency, # Rollouts, Token Cost) and the significant percentage reductions achieved by ACE. The separate presentation for offline and online adaptation is also well-handled.",
+            "relevance": "Highly relevant. This table provides strong quantitative support for ACE's efficiency claims, which is a critical aspect for practical deployment.",
+            "caption_quality": "The caption is concise and accurately describes the content of the table and the metrics being compared.",
+            "technical_assessment": "The use of negative percentages to indicate reductions makes the efficiency gains immediately obvious. The clear separation of offline (AppWorld) and online (FiNER) results provides a complete picture of cost effectiveness.",
+            "format_assessment": null,
+            "issues": [],
+            "suggestions": []
+          }
+        ],
+        "overall_rating": null,
+        "consistency_assessment": null,
+        "global_suggestions": []
+      }
+    ],
+    "visual_consistency": "The visual elements (figures and tables) maintain a consistent professional style, including font choices, color schemes (where applicable), and layout. Graphs are clear and readable, and table formats are generally uniform, with clear headings and data presentation.",
+    "caption_consistency": "Captions for all figures and tables are consistently formatted, providing sufficient detail to understand the element without needing to refer back to the main text, yet concise enough to be easily digestible. The use of bolding for element IDs is consistent.",
+    "global_issues": [],
+    "global_suggestions": []
+  },
+  "literature": {
+    "rating": "excellent",
+    "comprehensiveness": "The literature review is comprehensive, covering prior work in context adaptation (Section 2.1), agent memory (Appendix A), and relevant LLM research. The paper effectively positions ACE by highlighting the limitations of existing methods such as brevity bias and context collapse (Section 2.2).",
+    "gaps_identified": [
+      "The paper explicitly identifies two key limitations in existing context adaptation methods: brevity bias and context collapse, which ACE is designed to address (Section 2.2)."
+    ],
+    "citation_accuracy": "Citations appear accurate and are used appropriately to support statements and reference related work throughout the text."
+  },
+  "results": {
+    "rating": "excellent",
+    "result_quality": "The results presented in Tables 1, 2, 3, and 4 are of high quality, demonstrating significant improvements in performance (accuracy) and efficiency (latency, rollouts, token cost) across various benchmarks. The consistent outperformance of strong baselines validates the effectiveness of the ACE framework.",
+    "interpretation": "The interpretation of results is clear and insightful. The paper effectively explains the implications of ACE's performance gains, its ability to operate without labeled supervision, and the role of its modular design choices (Sections 4.3, 4.4, 4.5). The discussion also acknowledges limitations regarding feedback quality (Section 4.4).",
+    "limitations_assessment": "The paper includes a dedicated section (Appendix B) on 'Limitations and Challenges', which is a good practice. It explicitly discusses the reliance on a strong Reflector and the dependency on reliable feedback signals for optimal performance (Section B, Page 14).",
+    "limitations_discussed": true
+  },
+  "ethical_considerations": null,
+  "overall_assessment": {
+    "strengths": [
+      "ACE introduces a robust and scalable framework for context adaptation that effectively addresses the critical issues of brevity bias and context collapse in LLM applications (Section 2.2, 3).",
+      "The modular design with Generator, Reflector, and Curator (Figure 4) allows for systematic and continuous refinement of contexts, leading to significant performance gains across diverse tasks (Table 1, 2).",
+      "ACE demonstrates remarkable efficiency, reducing adaptation latency, rollouts, and token costs by substantial margins, making it practical for real-world deployment (Table 4).",
+      "The framework's ability to learn and improve without explicit ground-truth labels, by leveraging execution feedback, is a strong advantage for self-improving agent systems (Section 4.3)."
+    ],
+    "weaknesses": [
+      "The performance of ACE is reliant on the quality of the Reflector and the availability of reliable feedback signals, which could be a limitation in scenarios with noisy or scarce feedback (Section B).",
+      "While ablation studies are provided, a more detailed analysis of the sensitivity of ACE to hyperparameter choices or variations in the underlying LLM models for Generator/Reflector/Curator could be beneficial (Table 3).",
+      "The paper's discussion of \"Longer Context ≠ Higher Serving Cost\" in Section 5 is insightful but could benefit from more quantitative analysis or empirical data to fully support the claim that the increased context length does not translate to linearly higher inference cost."
+    ]
+  },
+  "introduction_quality": {
+    "focus_rating": "excellent",
+    "unnecessary_content": false,
+    "relevance_analysis": "The introduction (Section 1) provides a highly relevant and focused background, clearly establishing the importance of context adaptation and the limitations of existing approaches (brevity bias, context collapse). It effectively sets the stage for introducing ACE as a solution to these identified problems.",
+    "issues": []
+  },
+  "claims_accuracy": {
+    "over_claiming": false,
+    "evidence_support": "excellent",
+    "factual_accuracy": "The factual accuracy is high. All claims regarding performance improvements and efficiency gains are supported by extensive experimental results presented in tables and figures, with clear comparisons to multiple baselines.",
+    "claim_strength": [
+      "Well-supported: ACE consistently outperforms strong baselines, yielding average gains of 10.6% on agents and 8.6% on domain-specific benchmarks (Abstract, Table 1, Table 2).",
+      "Well-supported: ACE achieves 82.3% reduction in adaptation latency and 75.1% reduction in rollouts on AppWorld (Table 4(a)).",
+      "Well-supported: ACE matches the top-ranked production-level agent IBM-CUGA on AppWorld average and surpasses it on the harder test-challenge split using a smaller open-source model (Section 4.3, Table 1, Figure 5)."
+    ]
+  },
+  "ai_generation": {
+    "is_likely_ai_generated": false,
+    "authenticity_score": "authentic",
+    "analysis": "The paper exhibits a highly technical and precise writing style, consistent throughout. The argumentation is sophisticated, presenting a complex framework, detailing experiments, and discussing nuanced limitations. There are no indicators of generic phrasing, repetitive patterns, or superficial analysis often associated with AI-generated text. The novelty of the ideas and the depth of the technical explanations strongly suggest human authorship.",
+    "indicators": [
+      "Natural voice and novel insights",
+      "Sophisticated argumentation",
+      "Consistent technical depth"
+    ],
+    "confidence": "high"
+  },
+  "specific_issues": {
+    "major_issues": [],
+    "minor_issues": [
+      "In Table 3, the column order for 'TGC' and 'SGC' under 'Test-Challenge' is swapped compared to Tables 1 and 2. Ensure consistent ordering across tables.",
+      "For Table 3, the row 'ReAct + ACE' under 'Online Adaptation' is shown both with and without an 'X' for 'GT Labels'. While the 'X' denotes 'without GT Labels' as per the column header, explicitly stating 'ReAct + ACE w/o offline warmup' or similar for the second row would enhance clarity."
+    ],
+    "questions_for_authors": [
+      "Could the authors provide a more detailed discussion or empirical evidence regarding the long-term cost implications of maintaining and querying longer contexts produced by ACE, especially given that Section 5 mentions modern serving infrastructures optimize for this but lacks specific data?",
+      "Are there specific scenarios or types of tasks where the Reflector's performance is more critical or more prone to failure, and what strategies might mitigate these weaknesses beyond simply having a 'strong' Reflector?",
+      "What is the sensitivity of ACE's performance to the choice of the underlying LLM for the Generator, Reflector, and Curator? Are there specific LLM characteristics that make them more suitable for each role?"
+    ]
+  },
+  "detailed_feedback": {
+    "comments_for_authors": "This paper introduces ACE, a novel and highly effective framework for Agentic Context Engineering that addresses critical limitations in current LLM context adaptation, namely brevity bias and context collapse. The modular design, featuring Generator, Reflector, and Curator components, is well-conceived and contributes to the system's ability to accumulate and refine strategies over time. The experimental evaluation is comprehensive, demonstrating significant performance gains (e.g., +10.6% on agents, +8.6% on finance) and remarkable efficiency improvements (e.g., 82.3% reduction in latency) over strong baselines across diverse benchmarks. The ability of ACE to operate without labeled supervision by leveraging execution feedback is a key strength, enhancing its applicability to self-improving agents. The transparency through detailed methodology and provision of prompts in the appendix is commendable. Minor suggestions for improvement include ensuring consistent column ordering in tables and potentially providing more empirical evidence for the long-term cost analysis of longer contexts. Overall, this is an excellent paper presenting a significant advancement in the field of LLM context management.",
+    "confidential_comments_to_editor": "This is a strong paper presenting a highly original and impactful framework. The quantitative results are compelling, especially the efficiency gains and the ability to match a GPT-4.1 agent with a smaller open-source model. The thoroughness in addressing limitations and providing reproducibility details makes it a valuable contribution. I recommend acceptance."
+  },
+  "recommendation": {
+    "decision": "strong_accept",
+    "confidence": "high",
+    "justification": "The paper presents a novel, well-designed framework (ACE) that effectively solves critical problems (brevity bias, context collapse) in LLM context adaptation. Its strong empirical results, demonstrating significant performance gains and efficiency improvements across diverse benchmarks, coupled with its transparency and reproducibility, make it a valuable contribution to the field. The work has clear practical implications for building more robust and scalable AI systems.",
+    "conditions_for_acceptance": null
+  }
+}

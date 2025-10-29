@@ -1,14 +1,13 @@
 import argparse
 import json
 import logging
-import os
-import pathlib
+import re
 from enum import Enum
 from typing import List, Optional, Dict
 
-from google import genai
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_prompt_generator import PydanticPromptGenerator, PromptStyle
+from gemini_pdf_base import PDFAnalysisClient
 
 # Configure logging with enhanced formatting
 log_format = "%(asctime)s - %(levelname)s - %(funcName)s - %(message)s"
@@ -58,6 +57,13 @@ class IssuePriority(str, Enum):
     HIGH = "High"
     MEDIUM = "Medium"
     LOW = "Low"
+
+PRIORITY_ORDER = {
+    IssuePriority.CRITICAL: 4,
+    IssuePriority.HIGH: 3,
+    IssuePriority.MEDIUM: 2,
+    IssuePriority.LOW: 1,
+}
 
 class Issue(BaseModel):
     description: str = Field(description="Description of the issue")
@@ -273,6 +279,116 @@ CONSOLIDATION:
 
 FINAL OUTPUT: Provide top 5 highest-impact fixes before detailed analysis."""
 
+    TITLE_PROMPT = """Analyze the TITLE of this paper. Provide:
+- Whether a title is present
+- The title text
+- Word count
+- Clarity score (0-100)
+- Whether it contains clickbait language (e.g., sensational, emotionally charged, or overly simplistic words like 'shocking', 'secret', 'good/bad')
+- A list of any words flagged as clickbait
+- Issues found with corrections (prioritized)
+- Overall assessment
+- Specific feedback"""
+
+    ABSTRACT_PROMPT = """Analyze the ABSTRACT of this paper. Provide:
+- Whether an abstract is present
+- Word count
+- Clarity score (0-100)
+- Completeness score (0-100)
+- Issues found with corrections
+- Overall assessment
+- Specific feedback"""
+
+    INTRODUCTION_PROMPT = """Analyze the INTRODUCTION section. Provide:
+- Whether section is present
+- Word count
+- Clarity score (0-100)
+- Logical flow score (0-100)
+- Issues found with corrections
+- Overall assessment
+- Specific feedback"""
+
+    LITERATURE_REVIEW_PROMPT = """Analyze the LITERATURE REVIEW section. Provide:
+- Whether section is present
+- Word count
+- Comprehensiveness score (0-100)
+- Whether it identifies research gaps
+- Critical analysis level (0-100)
+- Citation quality score (0-100)
+- Number of sources
+- Issues found with corrections
+- Overall assessment
+- Specific feedback"""
+
+    METHODS_PROMPT = """Analyze the METHODS section. Provide:
+- Whether section is present
+- Word count
+- Clarity score (0-100)
+- Is reproducible (bool)
+- Logical flow score (0-100)
+- Technical soundness score (0-100)
+- Issues found with corrections
+- Missing details
+- Overall assessment
+- Specific feedback
+
+CRITICAL: Flag ANY missing parameters, hyperparameters, datasets, or implementation details that would prevent replication."""
+
+    RESULTS_PROMPT = """Analyze the RESULTS section. Provide:
+- Whether section is present
+- Word count
+- Presents key findings (bool)
+- Figures/tables quality (0-100)
+- Results interpretation (bool)
+- Clarity score (0-100)
+- Completeness score (0-100)
+- Issues found with corrections
+- Missing results
+- Overall assessment
+- Specific feedback"""
+
+    CONCLUSIONS_PROMPT = """Analyze the CONCLUSIONS section. Provide:
+- Whether section is present
+- Word count
+- Addresses research questions (bool)
+- Discusses implications (bool)
+- Acknowledges limitations (bool)
+- Suggests future work (bool)
+- Avoids overstatement (bool)
+- Clarity score (0-100)
+- Issues found with corrections
+- Missing elements
+- Overall assessment
+- Specific feedback"""
+
+    GENERAL_ISSUES_PROMPT = """Analyze this paper for all types of issues:
+- Grammar issues
+- Flow issues
+- Style/tone issues
+- Word choice issues
+- Continuity issues
+- Consistency issues
+- Formatting issues
+- Citation issues
+
+For each issue in each category, provide a structured issue object with description, correction, rationale, priority, and optional examples/location."""
+
+    TOP_FIXES_PROMPT = """Based on your analysis of this paper, identify the TOP 5 HIGHEST-IMPACT fixes ranked by strategic importance.
+For each fix, provide a structured object with rank (1-5), title, category, description of why it matters, and concrete action steps."""
+
+    COHESION_PROMPT = """Analyze the cohesion and transitions between major sections:
+- Intro to Methods: Suggest a linking sentence if needed
+- Methods to Results: Suggest a linking sentence if needed
+- Results to Conclusion: Suggest a linking sentence if needed
+- Identify any sections with poor transitions"""
+
+    PUBLISHABILITY_PROMPT = """Assess the publishability of this paper. Provide:
+- Overall score (0-100) based on journal-readiness
+- Verdict with clear recommendation (e.g., "Ready for submission", "Needs major revisions", etc.)
+- Key strengths that support publication
+- Critical issues that must be addressed before submission
+- Key recommendations for improvement"""
+
     JOURNAL_PROMPTS = {
         "apa": """Add to main analysis: Ensure APA 7th edition compliance:
 - Running head and page numbers
@@ -374,92 +490,121 @@ For EACH inconsistency:
     }
 
 
-class GeminiClient:
-    """A client to interact with the Gemini API for file uploads and content generation."""
+class GeminiPDFProofreader(PDFAnalysisClient):
     DEFAULT_MODEL = "gemini-2.5-flash"
 
-    def __init__(self, model_name: str = DEFAULT_MODEL):
-        self.model_name = model_name
-        self.client = self._create_client()
-        self.uploaded_file = None
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.delete_pdf()
-
-    def _get_api_key(self) -> str:
-        """Extract and validate API key from environment."""
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            error_msg = (
-                "GEMINI_API_KEY environment variable not set. "
-                "Set it with: export GEMINI_API_KEY='your-api-key'"
-            )
-            logger.error(error_msg)
-            raise ValueError(error_msg)
-        return api_key
-
-    def _create_client(self):
-        """Create and return a Gemini API client."""
-        api_key = self._get_api_key()
-        try:
-            logger.info(f"Connecting to Gemini API with model: {self.model_name}")
-            client = genai.Client(api_key=api_key)
-            logger.info("✓ Gemini client initialized successfully")
-            return client
-        except Exception as e:
-            error_msg = f"Failed to initialize Gemini client: {e}"
-            logger.error(error_msg)
-            raise ConnectionError(error_msg) from e
-
-    def _validate_pdf_file(self, pdf_file: str) -> pathlib.Path:
-        """Validate PDF file exists and has correct extension."""
-        pdf_path = pathlib.Path(pdf_file)
-        if not pdf_path.exists():
-            raise FileNotFoundError(f"PDF file not found at {pdf_file}")
-        if pdf_path.suffix.lower() != '.pdf':
-            raise ValueError(f"File must be a PDF. Got: {pdf_path.suffix}")
-        return pdf_path
-
-    def upload_pdf(self, pdf_file: str):
-        """Upload a PDF file to Gemini."""
-        if self.uploaded_file:
-            self.delete_pdf()
-
-        pdf_path = self._validate_pdf_file(pdf_file)
-        logging.info(f"Uploading PDF: {pdf_path.name}...")
-        self.uploaded_file = self.client.files.upload(
-            file=pdf_path,
-            config=dict(mime_type='application/pdf')
-        )
-        logging.info(f"✓ PDF uploaded: {pdf_path.name}")
-
-    def delete_pdf(self):
-        """Delete the uploaded PDF file from Gemini."""
-        if self.uploaded_file:
-            try:
-                self.client.files.delete(name=self.uploaded_file.name)
-                logging.info(f"✓ PDF file deleted: {self.uploaded_file.name}")
-            finally:
-                self.uploaded_file = None
-
-    def _build_response_config(self, response_model=None) -> dict:
-        """Build response configuration for JSON schema if provided."""
-        if not response_model:
-            return {}
-        return {
-            "response_mime_type": "application/json",
-            "response_schema": response_model
+    SECTION_ANALYSIS_CONFIG = {
+        "title": {
+            "model": TitleAnalysis,
+            "prompt": ProofreadingPrompts.TITLE_PROMPT,
+            "defaults": {
+                "title_present": False, "title_text": "", "word_count": 0,
+                "clarity_score": 0, "has_clickbait_language": False,
+                "clickbait_words": [], "issues": [],
+                "overall_assessment": "Unable to analyze", "specific_feedback": ""
+            }
+        },
+        "abstract": {
+            "model": AbstractAnalysis,
+            "prompt": ProofreadingPrompts.ABSTRACT_PROMPT,
+            "defaults": {
+                "abstract_present": False, "word_count": 0, "clarity_score": 0,
+                "completeness_score": 0, "issues": [],
+                "overall_assessment": "Unable to analyze", "specific_feedback": ""
+            }
+        },
+        "introduction": {
+            "model": IntroductionAnalysis,
+            "prompt": ProofreadingPrompts.INTRODUCTION_PROMPT,
+            "defaults": {
+                "section_present": False, "word_count": 0, "clarity_score": 0,
+                "logical_flow": 0, "issues": [],
+                "overall_assessment": "Not found", "specific_feedback": ""
+            }
+        },
+        "literature_review": {
+            "model": LiteratureReviewAnalysis,
+            "prompt": ProofreadingPrompts.LITERATURE_REVIEW_PROMPT,
+            "defaults": {
+                "section_present": False, "word_count": 0, "comprehensiveness": 0,
+                "identifies_research_gaps": False, "critical_analysis_level": 0,
+                "citation_quality": 0, "number_of_sources": 0, "issues": [],
+                "overall_assessment": "Not found", "specific_feedback": ""
+            }
+        },
+        "methods": {
+            "model": CoreMethodsAnalysis,
+            "prompt": ProofreadingPrompts.METHODS_PROMPT,
+            "defaults": {
+                "section_present": False, "word_count": 0, "clarity_score": 0,
+                "is_reproducible": False, "logical_flow": 0, "technical_soundness": 0,
+                "issues": [], "missing_details": [],
+                "overall_assessment": "Not found", "specific_feedback": ""
+            }
+        },
+        "results": {
+            "model": ResultsAnalysis,
+            "prompt": ProofreadingPrompts.RESULTS_PROMPT,
+            "defaults": {
+                "section_present": False, "word_count": 0, "presents_key_findings": False,
+                "figures_tables_quality": 0, "results_interpretation": False,
+                "clarity_score": 0, "completeness_score": 0, "issues": [],
+                "missing_results": [], "overall_assessment": "Not found",
+                "specific_feedback": ""
+            }
+        },
+        "conclusions": {
+            "model": ConclusionsAnalysis,
+            "prompt": ProofreadingPrompts.CONCLUSIONS_PROMPT,
+            "defaults": {
+                "section_present": False, "word_count": 0,
+                "addresses_research_questions": False, "discusses_implications": False,
+                "acknowledges_limitations": False, "suggests_future_work": False,
+                "avoids_overstatement": False, "clarity_score": 0, "issues": [],
+                "missing_elements": [], "overall_assessment": "Not found",
+                "specific_feedback": ""
+            }
         }
+    }
 
-    def generate_content(self, prompt: str, response_model=None):
-        """Generate content using the Gemini API."""
-        if not self.uploaded_file:
-            raise RuntimeError("No PDF loaded. Use upload_pdf() first.")
+    def __init__(self, model_name: str = DEFAULT_MODEL, journal: str = "generic"):
+        """Initialize proofreader with model and journal style.
 
-        config = self._build_response_config(response_model)
+        Args:
+            model_name: Gemini model to use
+            journal: Target journal style (apa, ieee, nature, generic)
+
+        Raises:
+            ValueError: If journal style is not supported
+        """
+        super().__init__(model_name)
+
+        if journal not in ProofreadingPrompts.JOURNAL_PROMPTS:
+            raise ValueError(f"Unknown journal style '{journal}'. Supported: {', '.join(ProofreadingPrompts.JOURNAL_PROMPTS.keys())}")
+
+        self.journal = journal
+        logger.info(f"Initialized proofreader with journal={journal}")
+
+    def _generate_content(self, prompt: str, response_model=None):
+        """Generate content from PDF using Gemini API.
+
+        Args:
+            prompt: Prompt to send to the API
+            response_model: Optional Pydantic model for structured output
+
+        Returns:
+            API response object
+
+        Raises:
+            RuntimeError: If PDF not loaded or API returns error
+        """
+        self._check_pdf_loaded()
+
+        config = {}
+        if response_model:
+            config["response_mime_type"] = "application/json"
+            config["response_schema"] = response_model
+
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=[self.uploaded_file, prompt],
@@ -468,58 +613,13 @@ class GeminiClient:
         self._validate_api_response(response)
         return response
 
-    def _validate_prompt_feedback(self, response):
-        """Validate prompt feedback for safety issues."""
-        if response.prompt_feedback and response.prompt_feedback.block_reason:
-            block_reason = response.prompt_feedback.block_reason
-            logging.error(f"Response blocked by API: {block_reason}")
-            raise RuntimeError(f"API blocked the response: {block_reason}")
-
-    def _validate_response_content(self, response):
-        """Validate response has actual content."""
-        if not response.candidates or response.text is None:
-            logging.error("No response content generated by the API")
-            raise RuntimeError("The API did not generate a response. This may be due to safety filters or content policy violations.")
-
-    def _validate_api_response(self, response):
-        """Orchestrate validation of API response."""
-        self._validate_prompt_feedback(response)
-        self._validate_response_content(response)
-
-
-class GeminiPDFProofreader:
-    DEFAULT_MODEL = "gemini-2.5-flash"
-
-    def __init__(self, model_name: str = DEFAULT_MODEL, journal: str = "generic"):
-        if journal not in ProofreadingPrompts.JOURNAL_PROMPTS:
-            raise ValueError(f"Unknown journal style '{journal}'. Supported: {', '.join(ProofreadingPrompts.JOURNAL_PROMPTS.keys())}")
-
-        self.model_name = model_name
-        self.journal = journal
-        self.client = GeminiClient(model_name=self.model_name)
-        logger.info(f"Initialized proofreader with model={model_name}, journal={journal}")
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.client.__exit__(exc_type, exc_val, exc_tb)
-
-    def load_pdf(self, pdf_file: str):
-        self.client.upload_pdf(pdf_file)
-
-    def _check_pdf_loaded(self):
-        """Check if a PDF file is loaded."""
-        if not self.client.uploaded_file:
-            raise RuntimeError("No PDF loaded. Use load_pdf() first.")
-
     def _analyze_section_json(self, section_name: str, prompt: str, response_model) -> Optional[BaseModel]:
         """
         Make a focused API call for a specific section with JSON response.
         """
         try:
             logger.info(f"Analyzing {section_name}...")
-            response = self.client.generate_content(prompt, response_model)
+            response = self._generate_content(prompt, response_model)
 
             if response.parsed is not None:
                 logger.info(f"✓ {section_name} parsed successfully")
@@ -551,172 +651,9 @@ class GeminiPDFProofreader:
         result = self._analyze_section_json(section_name, prompt, response_model)
         return result or response_model(**default_values)
 
-    def _analyze_title(self, journal_prompt: str) -> TitleAnalysis:
-        """Analyzes the title of the paper."""
-        instructions = """Analyze the TITLE of this paper. Provide:
-- Whether a title is present
-- The title text
-- Word count
-- Clarity score (0-100)
-- Whether it contains clickbait language (e.g., sensational, emotionally charged, or overly simplistic words like 'shocking', 'secret', 'good/bad')
-- A list of any words flagged as clickbait
-- Issues found with corrections (prioritized)
-- Overall assessment
-- Specific feedback"""
-
-        defaults = {
-            "title_present": False, "title_text": "", "word_count": 0,
-            "clarity_score": 0, "has_clickbait_language": False,
-            "clickbait_words": [], "issues": [],
-            "overall_assessment": "Unable to analyze", "specific_feedback": ""
-        }
-        return self._analyze_section("Title", TitleAnalysis, instructions, defaults, journal_prompt)
-
-    def _analyze_abstract(self, journal_prompt: str) -> AbstractAnalysis:
-        """Analyzes the abstract of the paper."""
-        instructions = """Analyze the ABSTRACT of this paper. Provide:
-- Whether an abstract is present
-- Word count
-- Clarity score (0-100)
-- Completeness score (0-100)
-- Issues found with corrections
-- Overall assessment
-- Specific feedback"""
-
-        defaults = {
-            "abstract_present": False, "word_count": 0, "clarity_score": 0,
-            "completeness_score": 0, "issues": [],
-            "overall_assessment": "Unable to analyze", "specific_feedback": ""
-        }
-        return self._analyze_section("Abstract", AbstractAnalysis, instructions, defaults, journal_prompt)
-
-    def _analyze_introduction(self, journal_prompt: str) -> IntroductionAnalysis:
-        """Analyzes the introduction of the paper."""
-        instructions = """Analyze the INTRODUCTION section. Provide:
-- Whether section is present
-- Word count
-- Clarity score (0-100)
-- Logical flow score (0-100)
-- Issues found with corrections
-- Overall assessment
-- Specific feedback"""
-
-        defaults = {
-            "section_present": False, "word_count": 0, "clarity_score": 0,
-            "logical_flow": 0, "issues": [],
-            "overall_assessment": "Not found", "specific_feedback": ""
-        }
-        return self._analyze_section("Introduction", IntroductionAnalysis, instructions, defaults, journal_prompt)
-
-    def _analyze_literature_review(self, journal_prompt: str) -> LiteratureReviewAnalysis:
-        """Analyzes the literature review of the paper."""
-        instructions = """Analyze the LITERATURE REVIEW section. Provide:
-- Whether section is present
-- Word count
-- Comprehensiveness score (0-100)
-- Whether it identifies research gaps
-- Critical analysis level (0-100)
-- Citation quality score (0-100)
-- Number of sources
-- Issues found with corrections
-- Overall assessment
-- Specific feedback"""
-
-        defaults = {
-            "section_present": False, "word_count": 0, "comprehensiveness": 0,
-            "identifies_research_gaps": False, "critical_analysis_level": 0,
-            "citation_quality": 0, "number_of_sources": 0, "issues": [],
-            "overall_assessment": "Not found", "specific_feedback": ""
-        }
-        return self._analyze_section("Literature Review", LiteratureReviewAnalysis, instructions, defaults, journal_prompt)
-
-    def _analyze_methods(self, journal_prompt: str) -> CoreMethodsAnalysis:
-        """Analyzes the methods section of the paper."""
-        instructions = """Analyze the METHODS section. Provide:
-- Whether section is present
-- Word count
-- Clarity score (0-100)
-- Is reproducible (bool)
-- Logical flow score (0-100)
-- Technical soundness score (0-100)
-- Issues found with corrections
-- Missing details
-- Overall assessment
-- Specific feedback
-
-CRITICAL: Flag ANY missing parameters, hyperparameters, datasets, or implementation details that would prevent replication."""
-
-        defaults = {
-            "section_present": False, "word_count": 0, "clarity_score": 0,
-            "is_reproducible": False, "logical_flow": 0, "technical_soundness": 0,
-            "issues": [], "missing_details": [],
-            "overall_assessment": "Not found", "specific_feedback": ""
-        }
-        return self._analyze_section("Methods", CoreMethodsAnalysis, instructions, defaults, journal_prompt)
-
-    def _analyze_results(self, journal_prompt: str) -> ResultsAnalysis:
-        """Analyzes the results section of the paper."""
-        instructions = """Analyze the RESULTS section. Provide:
-- Whether section is present
-- Word count
-- Presents key findings (bool)
-- Figures/tables quality (0-100)
-- Results interpretation (bool)
-- Clarity score (0-100)
-- Completeness score (0-100)
-- Issues found with corrections
-- Missing results
-- Overall assessment
-- Specific feedback"""
-
-        defaults = {
-            "section_present": False, "word_count": 0, "presents_key_findings": False,
-            "figures_tables_quality": 0, "results_interpretation": False,
-            "clarity_score": 0, "completeness_score": 0, "issues": [],
-            "missing_results": [], "overall_assessment": "Not found",
-            "specific_feedback": ""
-        }
-        return self._analyze_section("Results", ResultsAnalysis, instructions, defaults, journal_prompt)
-
-    def _analyze_conclusions(self, journal_prompt: str) -> ConclusionsAnalysis:
-        """Analyzes the conclusions section of the paper."""
-        instructions = """Analyze the CONCLUSIONS section. Provide:
-- Whether section is present
-- Word count
-- Addresses research questions (bool)
-- Discusses implications (bool)
-- Acknowledges limitations (bool)
-- Suggests future work (bool)
-- Avoids overstatement (bool)
-- Clarity score (0-100)
-- Issues found with corrections
-- Missing elements
-- Overall assessment
-- Specific feedback"""
-
-        defaults = {
-            "section_present": False, "word_count": 0,
-            "addresses_research_questions": False, "discusses_implications": False,
-            "acknowledges_limitations": False, "suggests_future_work": False,
-            "avoids_overstatement": False, "clarity_score": 0, "issues": [],
-            "missing_elements": [], "overall_assessment": "Not found",
-            "specific_feedback": ""
-        }
-        return self._analyze_section("Conclusions", ConclusionsAnalysis, instructions, defaults, journal_prompt)
-
     def _analyze_general_issues(self, journal_prompt: str) -> dict:
         """Analyzes general issues like grammar, flow, style, etc."""
-        instructions = """Analyze this paper for all types of issues:
-- Grammar issues
-- Flow issues
-- Style/tone issues
-- Word choice issues
-- Continuity issues
-- Consistency issues
-- Formatting issues
-- Citation issues
-
-For each issue in each category, provide a structured issue object with description, correction, rationale, priority, and optional examples/location."""
+        instructions = ProofreadingPrompts.GENERAL_ISSUES_PROMPT
 
         issue_schema = generate_schema_prompt(Issue, "")
 
@@ -742,8 +679,7 @@ Where each issue object follows this structure:
 
     def _analyze_top_fixes(self, journal_prompt: str) -> list:
         """Analyzes the top 5 fixes for the paper."""
-        instructions = """Based on your analysis of this paper, identify the TOP 5 HIGHEST-IMPACT fixes ranked by strategic importance.
-For each fix, provide a structured object with rank (1-5), title, category, description of why it matters, and concrete action steps."""
+        instructions = ProofreadingPrompts.TOP_FIXES_PROMPT
 
         topfix_schema = generate_schema_prompt(TopFix, "")
 
@@ -755,11 +691,7 @@ Return as JSON array where each element follows this structure:
 
     def _analyze_cohesion(self, journal_prompt: str) -> CohesionAnalysis:
         """Analyzes the cohesion of the paper."""
-        instructions = """Analyze the cohesion and transitions between major sections:
-- Intro to Methods: Suggest a linking sentence if needed
-- Methods to Results: Suggest a linking sentence if needed
-- Results to Conclusion: Suggest a linking sentence if needed
-- Identify any sections with poor transitions"""
+        instructions = ProofreadingPrompts.COHESION_PROMPT
 
         cohesion_prompt = generate_schema_prompt(CohesionAnalysis, instructions)
 
@@ -768,12 +700,7 @@ Return as JSON array where each element follows this structure:
 
     def _analyze_publishability(self, journal_prompt: str) -> PublishabilityAssessment:
         """Analyzes the publishability of the paper."""
-        instructions = """Assess the publishability of this paper. Provide:
-- Overall score (0-100) based on journal-readiness
-- Verdict with clear recommendation (e.g., "Ready for submission", "Needs major revisions", etc.)
-- Key strengths that support publication
-- Critical issues that must be addressed before submission
-- Key recommendations for improvement"""
+        instructions = ProofreadingPrompts.PUBLISHABILITY_PROMPT
 
         publishability_prompt = generate_schema_prompt(PublishabilityAssessment, instructions)
 
@@ -789,23 +716,25 @@ Return as JSON array where each element follows this structure:
         try:
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=[self.client.uploaded_file, metadata_prompt]
+                contents=[self.uploaded_file, metadata_prompt]
             )
             self._validate_api_response(response)
             metadata_text = response.text
             document_title = "Academic Paper"
             total_pages = 10
+
             if "title" in metadata_text.lower():
                 lines = metadata_text.split('\n')
                 for line in lines:
                     if "title" in line.lower():
                         document_title = line.split(':')[-1].strip() if ':' in line else "Academic Paper"
                         break
+
             if "page" in metadata_text.lower():
-                import re
                 matches = re.findall(r'\d+', metadata_text)
                 if matches:
                     total_pages = int(matches[0])
+
             return document_title, total_pages
         except Exception as e:
             logger.warning(f"Could not extract metadata: {e}")
@@ -820,15 +749,19 @@ Return as JSON array where each element follows this structure:
 
     def _run_section_analyses(self, journal_prompt: str) -> dict:
         """Run all section-specific analyses."""
-        return {
-            "title": self._analyze_title(journal_prompt),
-            "abstract": self._analyze_abstract(journal_prompt),
-            "introduction": self._analyze_introduction(journal_prompt),
-            "literature_review": self._analyze_literature_review(journal_prompt),
-            "methods": self._analyze_methods(journal_prompt),
-            "results": self._analyze_results(journal_prompt),
-            "conclusions": self._analyze_conclusions(journal_prompt),
-        }
+        section_analyses = {}
+        for section_name, config in self.SECTION_ANALYSIS_CONFIG.items():
+            # Format section_name for display, e.g., "literature_review" -> "Literature Review"
+            display_name = section_name.replace('_', ' ').title()
+            
+            section_analyses[section_name] = self._analyze_section(
+                display_name,
+                config["model"],
+                config["prompt"],
+                config["defaults"],
+                journal_prompt
+            )
+        return section_analyses
 
     def _extract_general_issues(self, general_response: dict) -> dict:
         """Extract and normalize all general issue categories."""
@@ -980,20 +913,19 @@ def _print_issue_with_details(issue: Issue, issue_num: int = None):
     print(f"     Why: {issue.rationale}")
 
 
-def _print_header(report: ProofreadingReport):
-    """Prints the header of the report."""
+def _print_report(report: ProofreadingReport):
+    """Pretty print the proofreading report with prioritized feedback."""
+    # Header
     print("\n" + "=" * 80)
     print("PROOFREADING REPORT")
     print("=" * 80)
     print(f"\nDocument: {report.document_title}")
     print(f"Pages: {report.total_pages}")
 
-def _print_summary(report: ProofreadingReport):
-    """Prints the summary of the report."""
+    # Summary
     print(f"\n{report.summary}")
 
-def _print_top_fixes(report: ProofreadingReport):
-    """Prints the top 5 highest-impact fixes."""
+    # Top 5 Highest-Impact Fixes
     print("\n" + "=" * 80)
     print("TOP 5 HIGHEST-IMPACT FIXES (Focus Here First)")
     print("=" * 80)
@@ -1006,8 +938,7 @@ def _print_top_fixes(report: ProofreadingReport):
     else:
         print("\n   ✓ No critical issues identified!")
 
-def _print_cohesion_analysis(report: ProofreadingReport):
-    """Prints the cohesion analysis."""
+    # Cohesion Analysis
     print("\n" + "=" * 80)
     print("SECTION TRANSITIONS & COHESION")
     print("=" * 80)
@@ -1027,8 +958,7 @@ def _print_cohesion_analysis(report: ProofreadingReport):
             for section in cohesion.missing_transitions:
                 print(f"   • {section}")
 
-def _print_publishability_assessment(report: ProofreadingReport):
-    """Prints the publishability assessment."""
+    # Publishability Assessment
     print("\n" + "=" * 80)
     print("PUBLISHABILITY ASSESSMENT")
     print("=" * 80)
@@ -1049,105 +979,10 @@ def _print_publishability_assessment(report: ProofreadingReport):
         for i, rec in enumerate(report.publishability.recommendations, 1):
             print(f"  {i}. {rec}")
 
-def _print_section_analysis(report: ProofreadingReport):
-    """Prints the detailed section-by-section analysis."""
-    print("\n" + "=" * 80)
-    print("DETAILED SECTION ANALYSIS")
-    print("=" * 80)
-
-    # TITLE ANALYSIS
-    if report.title_analysis.title_present:
-        print("\n[TITLE]")
-        print(f"  Text: {report.title_analysis.title_text}")
-        print(f"  Clarity: {report.title_analysis.clarity_score}/100 | Words: {report.title_analysis.word_count}")
-        if report.title_analysis.has_clickbait_language:
-            print(f"  [!] Clickbait Language Detected: {', '.join(report.title_analysis.clickbait_words)}")
-        print(f"  Assessment: {report.title_analysis.overall_assessment}")
-        print(f"  Feedback: {report.title_analysis.specific_feedback}")
-        if report.title_analysis.issues:
-            for issue in sorted(report.title_analysis.issues, key=lambda x: (x.priority.value if hasattr(x.priority, 'value') else str(x.priority)), reverse=True):
-                _print_issue_with_details(issue)
-
-    # ABSTRACT ANALYSIS
-    if report.abstract_analysis.abstract_present:
-        print("\n[ABSTRACT]")
-        print(f"  Clarity: {report.abstract_analysis.clarity_score}/100 | Completeness: {report.abstract_analysis.completeness_score}/100 | Words: {report.abstract_analysis.word_count}")
-        print(f"  Assessment: {report.abstract_analysis.overall_assessment}")
-        print(f"  Feedback: {report.abstract_analysis.specific_feedback}")
-        if report.abstract_analysis.issues:
-            for issue in sorted(report.abstract_analysis.issues, key=lambda x: (x.priority.value if hasattr(x.priority, 'value') else str(x.priority)), reverse=True):
-                _print_issue_with_details(issue)
-    else:
-        print("\n[ABSTRACT] ✗ CRITICAL: No abstract found. Academic papers MUST have an abstract section.")
-
-    # INTRODUCTION, METHODS, RESULTS, CONCLUSIONS (compact view)
-    print("\n[INTRODUCTION]")
-    if report.introduction_analysis.section_present:
-        print(f"  Clarity: {report.introduction_analysis.clarity_score}/100 | Flow: {report.introduction_analysis.logical_flow}/100 | Words: {report.introduction_analysis.word_count}")
-        print(f"  Assessment: {report.introduction_analysis.overall_assessment}")
-        if report.introduction_analysis.issues:
-            print(f"  Issues: {len(report.introduction_analysis.issues)}")
-    else:
-        print("  ✗ Not found")
-
-    print("\n[METHODS]")
-    if report.core_methods_analysis.section_present:
-        print(f"  Clarity: {report.core_methods_analysis.clarity_score}/100 | Reproducibility: {report.core_methods_analysis.is_reproducible} | Words: {report.core_methods_analysis.word_count}")
-        print(f"  Assessment: {report.core_methods_analysis.overall_assessment}")
-        if report.core_methods_analysis.issues:
-            print(f"  Issues: {len(report.core_methods_analysis.issues)}")
-    else:
-        print("  ✗ Not found")
-
-    print("\n[RESULTS]")
-    if report.results_analysis.section_present:
-        print(f"  Clarity: {report.results_analysis.clarity_score}/100 | Completeness: {report.results_analysis.completeness_score}/100 | Words: {report.results_analysis.word_count}")
-        print(f"  Assessment: {report.results_analysis.overall_assessment}")
-        if report.results_analysis.issues:
-            print(f"  Issues: {len(report.results_analysis.issues)}")
-    else:
-        print("  ✗ Not found")
-
-    print("\n[CONCLUSIONS]")
-    if report.conclusions_analysis.section_present:
-        print(f"  Clarity: {report.conclusions_analysis.clarity_score}/100 | Words: {report.conclusions_analysis.word_count}")
-        print(f"  Assessment: {report.conclusions_analysis.overall_assessment}")
-        if report.conclusions_analysis.issues:
-            print(f"  Issues: {len(report.conclusions_analysis.issues)}")
-    else:
-        print("  ✗ Not found")
-
-def _print_issue_categories(report: ProofreadingReport):
-    """Prints the consolidated issues by category."""
-    print("\n" + "=" * 80)
-    print("ALL ISSUES BY CATEGORY (Sorted by Priority)")
-    print("=" * 80)
-
-    issue_categories = [
-        ("CRITICAL PRIORITY ISSUES", [issue for all_issues in [report.grammar_issues, report.flow_issues, report.style_issues, report.word_choice_issues, report.continuity_issues, report.consistency_issues, report.formatting_issues, report.citation_issues] for issue in all_issues if issue.priority == IssuePriority.CRITICAL]),
-        ("HIGH PRIORITY ISSUES", [issue for all_issues in [report.grammar_issues, report.flow_issues, report.style_issues, report.word_choice_issues, report.continuity_issues, report.consistency_issues, report.formatting_issues, report.citation_issues] for issue in all_issues if issue.priority == IssuePriority.HIGH]),
-        ("MEDIUM PRIORITY ISSUES", [issue for all_issues in [report.grammar_issues, report.flow_issues, report.style_issues, report.word_choice_issues, report.continuity_issues, report.consistency_issues, report.formatting_issues, report.citation_issues] for issue in all_issues if issue.priority == IssuePriority.MEDIUM]),
-        ("LOW PRIORITY ISSUES", [issue for all_issues in [report.grammar_issues, report.flow_issues, report.style_issues, report.word_choice_issues, report.continuity_issues, report.consistency_issues, report.formatting_issues, report.citation_issues] for issue in all_issues if issue.priority == IssuePriority.LOW]),
-    ]
-
-    for category_name, issues in issue_categories:
-        if issues:
-            print(f"\n{category_name} ({len(issues)} found)")
-            print("-" * 80)
-            for i, issue in enumerate(issues, 1):
-                _print_issue_with_details(issue, i)
-
-    print("\n" + "=" * 80 + "\n")
-
-
-def _print_report(report: ProofreadingReport):
-    """Pretty print the proofreading report with prioritized feedback."""
-    _print_header(report)
-    _print_summary(report)
-    _print_top_fixes(report)
-    _print_cohesion_analysis(report)
-    _print_publishability_assessment(report)
+    # Detailed Section Analysis
     _print_section_analysis(report)
+
+    # All Issues by Category
     _print_issue_categories(report)
 
 
@@ -1202,7 +1037,7 @@ Supported focus areas: {', '.join(all_focus_choices)}
     parser.add_argument('--focus', type=str, choices=all_focus_choices,
                       help='Focus on a specific aspect or section instead of full analysis')
     parser.add_argument('-o', '--output', type=str,
-                      help='Optional: Save JSON report to file')
+                      help='Save JSON report to file. This is required to see the output of a full analysis.')
 
     args = parser.parse_args()
 
@@ -1214,43 +1049,41 @@ Supported focus areas: {', '.join(all_focus_choices)}
             if args.focus:
                 print(f"\nAnalyzing {args.focus}...\n")
                 
-                journal_prompt = ProofreadingPrompts.JOURNAL_PROMPTS.get(proofreader.journal, ProofreadingPrompts.JOURNAL_PROMPTS["generic"])
+                journal_prompt = ProofreadingPrompts.JOURNAL_PROMPTS.get(
+                    proofreader.journal, ProofreadingPrompts.JOURNAL_PROMPTS["generic"]
+                )
 
-                section_analyzers = {
-                    "title": proofreader._analyze_title,
-                    "abstract": proofreader._analyze_abstract,
-                    "introduction": proofreader._analyze_introduction,
-                    "literature_review": proofreader._analyze_literature_review,
-                    "methods": proofreader._analyze_methods,
-                    "results": proofreader._analyze_results,
-                    "conclusions": proofreader._analyze_conclusions,
-                }
+                if args.focus in proofreader.SECTION_ANALYSIS_CONFIG:
+                    config = proofreader.SECTION_ANALYSIS_CONFIG[args.focus]
+                    display_name = args.focus.replace('_', ' ').title()
+                    
+                    result = proofreader._analyze_section(
+                        display_name,
+                        config["model"],
+                        config["prompt"],
+                        config["defaults"],
+                        journal_prompt
+                    )
+                    print(result.model_dump_json(indent=2))
 
-                if args.focus in section_analyzers:
-                    result = section_analyzers[args.focus](journal_prompt)
-                    if isinstance(result, BaseModel):
-                        print(result.model_dump_json(indent=2))
-                    elif isinstance(result, list):
-                        print(json.dumps([item.model_dump() for item in result], indent=2))
-                    else:
-                        print(result)
                 elif args.focus == 'cohesion':
                     result = proofreader._analyze_cohesion(journal_prompt)
                     print(result.model_dump_json(indent=2))
-                else:  # It's an issue-based focus
+                else:  # It's an issue-based focus from SECTION_PROMPTS
                     result = proofreader.proofread_section(args.focus)
                     print(result)
 
             else:
                 print(f"\nRunning comprehensive proofreading analysis ({args.journal} style)...\n")
                 report = proofreader.proofread()
-                _print_report(report)
 
                 if args.output:
                     with open(args.output, 'w') as f:
                         json.dump(report.model_dump(), f, indent=2)
                     logger.info(f"✓ Report saved to {args.output}")
                     print(f"\n✓ JSON report saved: {args.output}")
+                else:
+                    print("\nComprehensive analysis complete. To view the report, please re-run the command with the '-o <filename>.json' argument to save the output.")
 
     except (FileNotFoundError, ValueError, ConnectionError, RuntimeError) as e:
         logger.error(f"Error: {e}")

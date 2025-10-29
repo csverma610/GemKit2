@@ -1,0 +1,18 @@
+{
+  "annotated_image_description": "A tiger is prominently positioned in the center and lower half of the image, walking from left to right amidst green grass, with dense green foliage forming the background.",
+  "detected_objects": [
+    {
+      "label": "tiger",
+      "confidence": 0.98,
+      "bounding_box": [
+        7,
+        43,
+        492,
+        293
+      ]
+    }
+  ],
+  "annotated_image_paths": [
+    "annotated_images/detected_tiger_annotated.png"
+  ]
+}
