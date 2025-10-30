@@ -5,10 +5,11 @@ from gemini_client import GeminiClient
 
 class PromptGenerator:
     """
-    A class to generate all evaluation prompts for the PromptEvaluator.
-    
-    This class centralizes all prompt generation logic to ensure consistency
-    and maintainability.
+    Generates various evaluation prompts for the PromptEvaluator.
+
+    This class centralizes the logic for creating different types of prompts
+    used to evaluate a model's response, ensuring consistency and ease of
+    maintenance.
     """
     
     @staticmethod
@@ -51,15 +52,16 @@ Focus on specific requirement fulfillment:
         criteria: str
     ) -> str:
         """
-        Build a detailed evaluation instruction prompt.
-        
+        Builds a detailed prompt for a comprehensive evaluation.
+
         Args:
-            prompt (str): The original prompt/instructions
-            response (str): The model's response to evaluate
-            criteria (str): Type of evaluation criteria
-            
+            prompt (str): The original prompt that was given to the model.
+            response (str): The model's response to be evaluated.
+            criteria (str): The type of evaluation criteria to use ('comprehensive',
+                            'format', 'content', or 'requirements').
+
         Returns:
-            str: Complete evaluation prompt
+            str: The complete evaluation prompt.
         """
         criteria_instructions = cls.get_criteria_instructions()
         criteria_instruction = criteria_instructions.get(
@@ -105,14 +107,14 @@ OVERALL ASSESSMENT:
     @staticmethod
     def build_quick_check_prompt(prompt: str, response: str) -> str:
         """
-        Build a quick binary check prompt.
-        
+        Builds a prompt for a quick, binary evaluation.
+
         Args:
-            prompt (str): The original prompt
-            response (str): The response to check
-            
+            prompt (str): The original prompt.
+            response (str): The model's response.
+
         Returns:
-            str: Quick evaluation prompt
+            str: The quick evaluation prompt.
         """
         return f"""
 Analyze if this response follows the given prompt instructions. Provide a simple evaluation.
@@ -129,14 +131,14 @@ REASON: [Brief 1-2 sentence explanation]
     @staticmethod
     def build_scoring_prompt(prompt: str, response: str) -> str:
         """
-        Build a numerical scoring prompt.
-        
+        Builds a prompt for a numerical score evaluation.
+
         Args:
-            prompt (str): The original prompt
-            response (str): The response to score
-            
+            prompt (str): The original prompt.
+            response (str): The model's response.
+
         Returns:
-            str: Scoring evaluation prompt
+            str: The scoring evaluation prompt.
         """
         return f"""
 Rate how well this response follows the given prompt instructions on a scale of 1-10.
@@ -152,14 +154,15 @@ JUSTIFICATION: [One sentence explaining the score]
 
 class PromptEvaluator:
     """
-    A class to evaluate if a model's response follows the given prompt instructions.
-    
-    This class analyzes the adherence of generated responses to their corresponding prompts.
+    Evaluates how well a model's response adheres to the instructions in a given prompt.
+
+    This class uses the Gemini API to perform the evaluation, providing different
+    levels of detail, from a quick binary check to a comprehensive analysis.
     """
     
     def __init__(self):
         """
-        Initialize the PromptEvaluator.
+        Initializes the PromptEvaluator.
         """
         self.prompt_generator = PromptGenerator()
         
@@ -175,20 +178,17 @@ class PromptEvaluator:
         evaluation_criteria: str = "comprehensive"
     ) -> str:
         """
-        Evaluate if the response follows the prompt instructions.
-        
+        Performs a comprehensive evaluation of a model's response.
+
         Args:
-            prompt (str): The original prompt/instructions
-            response (str): The model's response to evaluate
-            evaluation_criteria (str): Type of evaluation 
-                ('comprehensive', 'format', 'content', 'requirements')
-            
+            prompt (str): The original prompt given to the model.
+            response (str): The model's response to be evaluated.
+            evaluation_criteria (str, optional): The criteria to use for the evaluation.
+                                                 Can be 'comprehensive', 'format', 'content',
+                                                 or 'requirements'. Defaults to "comprehensive".
+
         Returns:
-            str: Evaluation result with score and detailed feedback
-            
-        Raises:
-            ValueError: If prompt or response is empty
-            Exception: If API call fails
+            str: A detailed evaluation, including a score, analysis, and recommendations.
         """
         self._validate_inputs(prompt, response)
         
@@ -200,14 +200,14 @@ class PromptEvaluator:
     
     def quick_check(self, prompt: str, response: str) -> str:
         """
-        Quick binary check if response follows prompt.
-        
+        Performs a quick, binary check of a model's response.
+
         Args:
-            prompt (str): The original prompt
-            response (str): The response to check
-            
+            prompt (str): The original prompt.
+            response (str): The model's response.
+
         Returns:
-            str: Simple YES/NO evaluation with brief reasoning
+            str: A simple "YES/NO" evaluation with a brief explanation.
         """
         self._validate_inputs(prompt, response)
         
@@ -219,14 +219,14 @@ class PromptEvaluator:
     
     def score_only(self, prompt: str, response: str) -> str:
         """
-        Get only a numerical score for instruction following.
-        
+        Provides a numerical score for a model's response.
+
         Args:
-            prompt (str): The original prompt
-            response (str): The response to score
-            
+            prompt (str): The original prompt.
+            response (str): The model's response.
+
         Returns:
-            str: Numerical score with brief justification
+            str: A numerical score (1-10) with a brief justification.
         """
         self._validate_inputs(prompt, response)
         

@@ -22,7 +22,9 @@ from lmdb_storage import LMDBStorage
 logger = logging.getLogger(__name__)
 
 class JsonFormatter(logging.Formatter):
-    """Formats log records as JSON strings."""
+    """
+    A logging formatter that outputs log records as JSON strings.
+    """
     def format(self, record):
         log_object = {
             "timestamp": self.formatTime(record, self.datefmt),
@@ -38,20 +40,20 @@ class JsonFormatter(logging.Formatter):
 @dataclass
 class ModelConfig:
     """
-    Configuration dataclass for GeminiClient initialization.
+    Configuration for the GeminiClient, specifying model and generation parameters.
 
     Attributes:
-        model_name (str): The Gemini model to use.
-        max_retries (int): Maximum number of retry attempts for failed requests.
-        initial_delay (float): Initial delay in seconds for exponential backoff.
-        timeout (float): Request timeout in seconds.
-        rate_limit_calls (int): Maximum number of API calls allowed per period.
-        rate_limit_period (float): Time period in seconds for rate limiting.
-        temperature (Optional[float]): Controls randomness. Range: 0.0-2.0. Lower = deterministic, higher = creative.
-        top_p (Optional[float]): Nucleus sampling. Range: 0.0-1.0. Controls diversity of token selection.
-        top_k (Optional[int]): Top-K sampling. Limits to top K tokens. Use for more focused outputs.
-        max_output_tokens (Optional[int]): Maximum number of tokens in the response.
-        thinking_budget (Optional[int]): The budget for the thinking process. 0 disables thinking, -1 is dynamic.
+        model_name (str): The name of the Gemini model to use.
+        max_retries (int): The maximum number of times to retry a failed API call.
+        initial_delay (float): The initial delay in seconds for exponential backoff.
+        timeout (float): The timeout for API requests in seconds.
+        rate_limit_calls (int): The maximum number of API calls allowed per `rate_limit_period`.
+        rate_limit_period (float): The time period in seconds for rate limiting.
+        temperature (Optional[float]): Controls the randomness of the output.
+        top_p (Optional[float]): The nucleus sampling probability.
+        top_k (Optional[int]): The top-k sampling parameter.
+        max_output_tokens (Optional[int]): The maximum number of tokens to generate.
+        thinking_budget (Optional[int]): The budget for the model's thinking time.
     """
     model_name: str = 'gemini-2.5-flash'
     max_retries: int = 3
@@ -68,13 +70,13 @@ class ModelConfig:
 @dataclass
 class ModelInput:
     """
-    Dataclass to structure user input parameters for Gemini API requests.
+    Structures the input for a Gemini model request.
 
     Attributes:
-        user_prompt (str): The user's question or prompt (required).
-        sys_prompt (str): Optional system prompt to set behavior or context.
-        assist_prompt (str): Optional assistant message for few-shot examples or context.
-        response_schema (Optional[Any]): Optional schema for structured output (dict, Pydantic model, etc.).
+        user_prompt (str): The primary text prompt from the user.
+        sys_prompt (str): Optional system-level instructions to guide the model's behavior.
+        assist_prompt (str): Optional assistant message for providing few-shot examples or context.
+        response_schema (Optional[Any]): A Pydantic model or a JSON schema dictionary for structured output.
     """
     user_prompt: str
     sys_prompt: str = ""
@@ -83,19 +85,21 @@ class ModelInput:
 
 class GeminiClient:
     """
-    A client to interact with the Gemini API.
-    Supports text and structured output generation.
+    A client for interacting with the Google Gemini API for text generation.
+
+    This class provides a high-level interface for sending prompts to the Gemini
+    API, with support for structured output, streaming, and rate limiting.
     """
     MODELS_NAME = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite']
 
     def __init__(self, config: ModelConfig = None, api_key: Optional[str] = None):
         """
-        Initialize GeminiClient with configuration.
+        Initializes the GeminiClient.
 
         Args:
-            config (ModelConfig): Configuration object. If None, uses default configuration.
-            api_key (Optional[str]): The API key for authentication. If None, it will
-                                     be sourced from the GEMINI_API_KEY environment variable.
+            config (ModelConfig, optional): A configuration object for the client.
+            api_key (Optional[str], optional): The API key for authentication. If not provided,
+                                             it's read from the GEMINI_API_KEY environment variable.
         """
         # Use default config if none provided
         if config is None:
@@ -249,14 +253,15 @@ class GeminiClient:
     )
     def generate_text(self, model_input: ModelInput, stream: bool = False) -> Union[str, Iterable[str]]:
         """
-        Sends a prompt to the Gemini API and returns the text response.
+        Generates a text response from the Gemini model.
 
         Args:
-            model_input (ModelInput): Dataclass containing all prompt and configuration settings.
-            stream (bool): If True, streams the response.
+            model_input (ModelInput): The input for the model, including the prompt.
+            stream (bool, optional): Whether to stream the response. Defaults to False.
 
         Returns:
-            Union[str, Iterable[str]]: The text response or an iterator of text chunks.
+            Union[str, Iterable[str]]: The generated text, or an iterable of text chunks
+                                       if streaming is enabled.
         """
         logger.debug(f"Generating text with model: {self.model_name}")
         # Enforce rate limiting before API call
@@ -281,17 +286,22 @@ class GeminiClient:
 
     def generate_json(self, model_input: ModelInput, max_retries: int = 1) -> Union[dict, list]:
         """
-        Generates structured JSON data with a two-pass self-correction mechanism.
+        Generates a structured JSON response from the Gemini model.
+
+        This method uses a two-pass self-correction mechanism. If the first attempt
+        to generate a valid JSON object fails, it will make additional attempts
+        to ask the model to correct its own output.
 
         Args:
             model_input (ModelInput): The input for the model, including the response schema.
-            max_retries (int): The number of times to ask the model to correct its own output.
+            max_retries (int, optional): The number of self-correction attempts. Defaults to 1.
 
         Returns:
-            The parsed JSON data as a Python object.
+            Union[dict, list]: The parsed JSON data.
 
         Raises:
-            ValueError: If the model fails to produce valid JSON after all retries.
+            ValueError: If a `response_schema` is not provided, or if the model fails
+                        to produce a valid JSON object after all retries.
         """
         if not model_input.response_schema:
             raise ValueError("response_schema must be provided for generate_json")
@@ -365,38 +375,20 @@ class GeminiClient:
 
     def generate(self, model_input: ModelInput, stream: bool = False) -> Union[str, dict, list, Any, Iterable[str]]:
         """
-        Unified method to generate responses. Automatically handles text, vision, and structured output.
+        A unified method for generating responses from the Gemini model.
 
-        This is the recommended method to use as it intelligently routes to the appropriate
-        generation method based on the ModelInput parameters.
+        This method intelligently routes the request to the appropriate generation
+        method based on the `ModelInput` parameters. If a `response_schema` is
+        provided, it will use `generate_json`; otherwise, it will use `generate_text`.
 
         Args:
-            model_input (ModelInput): Dataclass containing all prompt and configuration settings.
-            stream (bool): If True, streams the response for text generation. Ignored for structured output.
+            model_input (ModelInput): The input for the model.
+            stream (bool, optional): Whether to stream the response. Defaults to False.
 
         Returns:
-            Union[str, dict, list, Any, Iterable[str]]:
-                - str: For text-only generation
-                - dict/list/Any: For structured output generation
-                - Iterable[str]: For streaming text generation
-
-        Examples:
-            # Text generation
-            >>> model_input = ModelInput(user_prompt="Hello")
-            >>> response = client.generate(model_input)
-
-            # Streaming text generation
-            >>> model_input = ModelInput(user_prompt="Tell me a story.")
-            >>> for chunk in client.generate(model_input, stream=True):
-            ...     print(chunk, end="")
-
-            # Structured output
-            >>> schema = {"type": "object", "properties": {"name": {"type": "string"}}}
-            >>> model_input = ModelInput(
-            ...     user_prompt="Extract name",
-            ...     response_schema=schema
-            ... )
-            >>> response = client.generate(model_input)
+            Union[str, dict, list, Any, Iterable[str]]: The generated response, which can be
+                                                       a string, a JSON object, or an iterable
+                                                       of strings if streaming is enabled.
         """
         logger.debug("Using unified generate() method")
 

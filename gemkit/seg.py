@@ -18,17 +18,21 @@ from google.genai.errors import APIError
 from PIL import Image, ImageDraw
 
 class GeminiImageSegmentation:
-    """Image segmentation using Google Gemini API with mask generation."""
+    """
+    Performs image segmentation using the Google Gemini API.
+
+    This class takes an image and an optional prompt, and then uses the Gemini
+    API to generate segmentation masks for the objects in the image. The masks,
+    along with their bounding boxes and labels, are saved to an output directory.
+    """
 
     def __init__(self, model_name: str = 'gemini-2.5-flash') -> None:
         """
-        Initialize Gemini client.
-        
+        Initializes the GeminiImageSegmentation instance.
+
         Args:
-            model_name: Gemini model to use for segmentation.
-            
-        Raises:
-            ValueError: If no API key is provided or found in environment.
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to 'gemini-2.5-flash'.
         """
         self.api_key = os.getenv('GEMINI_API_KEY')
         if not self.api_key:
@@ -179,20 +183,19 @@ class GeminiImageSegmentation:
         output_dir: str = "segmentation_outputs",
     ) -> Dict[str, Any]:
         """
-        Perform image segmentation and save results.
+        Performs image segmentation on a given image.
 
         Args:
-            image_path: Path to image file.
-            prompt: Custom segmentation prompt (overrides objects_to_segment).
-            objects_to_segment: List of specific objects to segment.
-            output_dir: Output directory for results.
+            image_path (str): The path to the image file.
+            prompt (Optional[str], optional): A custom prompt to guide the segmentation.
+                                    If provided, `objects_to_segment` is ignored.
+            objects_to_segment (list[str], optional): A list of specific objects to segment.
+            output_dir (str, optional): The directory to save the output files.
+                                        Defaults to "segmentation_outputs".
 
         Returns:
-            Dictionary containing:
-                - total_masks (int): Number of successfully segmented objects
-                - output_directory (str): Path to output directory
-                - masks (List[Dict]): List of mask metadata
-                - error (str): Error message if operation failed
+            dict: A dictionary containing the segmentation results, or an
+                  error message if the operation fails.
         """
         if not self.client:
             return {"error": "Gemini client not initialized."}

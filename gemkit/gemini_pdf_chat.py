@@ -20,25 +20,30 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiPDFChat(PDFAnalysisClient):
-    """Interactive chat interface for PDF analysis.
+    """
+    An interactive chat interface for analyzing PDF documents.
 
-    Provides flexible text generation with optional structured output.
-    Inherits PDF management from PDFAnalysisClient.
+    This class extends `PDFAnalysisClient` to provide a chat-like interface for
+    asking questions about a loaded PDF. It supports both plain text and structured
+    (Pydantic model) responses.
     """
 
     def generate_text(self, prompt: str, response_schema: Optional[Type[BaseModel]] = None) -> str | BaseModel:
-        """Send a message and get a response.
+        """
+        Sends a prompt to the Gemini model and returns the response.
 
         Args:
-            prompt: User's message/question
-            response_schema: Optional Pydantic BaseModel for structured output
+            prompt (str): The user's question or prompt.
+            response_schema (Optional[Type[BaseModel]], optional): A Pydantic model to use for
+                                                                    structured output.
 
         Returns:
-            If response_schema provided: Pydantic model instance
-            If no schema: Plain text string response
+            str | BaseModel: If a `response_schema` is provided, a Pydantic model instance
+                             is returned. Otherwise, a plain text string is returned.
 
         Raises:
-            RuntimeError: If PDF not loaded, response blocked, or parsing fails
+            RuntimeError: If no PDF is loaded, the response is blocked by the API,
+                          or the response cannot be parsed.
         """
         self._check_pdf_loaded()
 

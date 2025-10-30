@@ -21,13 +21,17 @@ except Exception as e:
 
 def fetch_gemini_grounded_response(prompt: str) -> Optional[types.GenerateContentResponse]:
     """
-    Calls the Gemini API with Google Search grounding enabled using the Python SDK.
+    Calls the Gemini API with Google Search grounding enabled.
+
+    This function sends a prompt to the Gemini model and instructs it to use
+    Google Search to find up-to-date information to answer the prompt.
 
     Args:
         prompt (str): The user's query.
 
     Returns:
-        Optional[types.GenerateContentResponse]: The API response object, or None on failure.
+        Optional[types.GenerateContentResponse]: The API response object, or None
+                                                 if an error occurs.
     """
     if not client:
         print("[ERROR] Gemini Client is not initialized.")
@@ -69,7 +73,13 @@ def fetch_gemini_grounded_response(prompt: str) -> Optional[types.GenerateConten
         return None
 
 def process_response(response: Optional[types.GenerateContentResponse]):
-    """Processes the Gemini SDK response to extract text and citations."""
+    """
+    Processes the Gemini API response to extract and print the generated
+    text and any citations.
+
+    Args:
+        response (Optional[types.GenerateContentResponse]): The API response object.
+    """
     if not response or not response.candidates:
         print("\n[ERROR] No valid response or candidates found.")
         return
@@ -107,9 +117,10 @@ def process_response(response: Optional[types.GenerateContentResponse]):
         print("\n[INFO] No grounding metadata (citations) found in the response.")
 
 
-# --- Main Execution ---
-if __name__ == "__main__":
-    
+def main():
+    """
+    The main function for the tool calling example.
+    """
     # Example query that requires up-to-date, real-world information
     user_query = "What is the biggest science news story of the week?"
     print(f"User Query: {user_query}")
@@ -119,4 +130,8 @@ if __name__ == "__main__":
 
     # Process and display the results
     process_response(api_response)
+
+# --- Main Execution ---
+if __name__ == "__main__":
+    main()
 

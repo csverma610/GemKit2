@@ -13,11 +13,20 @@ from image_source import ImageSource
 
 class GeminiImageSegmentation:
     """
-    A class to handle image segmentation using the Google GenAI SDK (Gemini model).
-    Generates segmentation masks with bounding boxes and labels.
+    Performs image segmentation using the Google Gemini API.
+
+    This class takes an image and an optional prompt, and then uses the Gemini
+    API to generate segmentation masks for the objects in the image. The masks,
+    along with their bounding boxes and labels, are saved to an output directory.
     """
     def __init__(self, model_name='gemini-1.5-flash'):
-        """Initializes the Gemini client and sets the model name."""
+        """
+        Initializes the GeminiImageSegmentation instance.
+
+        Args:
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to 'gemini-1.5-flash'.
+        """
         self.model_name = model_name
         self.client = None
         try:
@@ -27,7 +36,19 @@ class GeminiImageSegmentation:
 
     def segment_image(self, image: Image.Image, prompt: str = None, objects_to_segment: list[str] = None, output_dir: str = "segmentation_outputs") -> dict | str:
         """
-        Orchestrates the image segmentation process.
+        Performs image segmentation on a given image.
+
+        Args:
+            image (Image.Image): The PIL Image object to be segmented.
+            prompt (str, optional): A custom prompt to guide the segmentation.
+                                    If provided, `objects_to_segment` is ignored.
+            objects_to_segment (list[str], optional): A list of specific objects to segment.
+            output_dir (str, optional): The directory to save the output files.
+                                        Defaults to "segmentation_outputs".
+
+        Returns:
+            dict | str: A dictionary containing the segmentation results, or an
+                        error string if the operation fails.
         """
         if not self.client:
             return "Error: Gemini client is not initialized."

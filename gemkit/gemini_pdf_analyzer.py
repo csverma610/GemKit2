@@ -9,14 +9,33 @@ from google import genai
 from google.genai import types
 
 class PDFSplitter:
-    """Handles PDF file operations and chunking"""
+    """
+    A utility class for handling PDF file operations, including splitting
+    large PDFs into smaller chunks.
+    """
     
     def __init__(self, max_pages: int = 100, max_size: int = 10 * 1024 * 1024):
+        """
+        Initializes the PDFSplitter.
+
+        Args:
+            max_pages (int, optional): The maximum number of pages per chunk.
+            max_size (int, optional): The maximum size of a chunk in bytes.
+        """
         self.max_pages = max_pages
         self.max_size = max_size
     
     def get_info(self, pdf_path: pathlib.Path) -> dict:
-        """Get PDF information"""
+        """
+        Retrieves information about a PDF file.
+
+        Args:
+            pdf_path (pathlib.Path): The path to the PDF file.
+
+        Returns:
+            dict: A dictionary containing the file size, number of pages, and
+                  whether the PDF needs to be split.
+        """
         file_size = os.path.getsize(pdf_path)
         num_pages = len(pypdf.PdfReader(pdf_path).pages)
         needs_split = num_pages > self.max_pages or file_size > self.max_size
@@ -27,7 +46,16 @@ class PDFSplitter:
         }
     
     def split(self, pdf_path: pathlib.Path, temp_dir: pathlib.Path) -> list[pathlib.Path]:
-        """Split PDF into chunks"""
+        """
+        Splits a PDF file into smaller chunks.
+
+        Args:
+            pdf_path (pathlib.Path): The path to the PDF file to split.
+            temp_dir (pathlib.Path): The directory to save the chunks in.
+
+        Returns:
+            list[pathlib.Path]: A list of paths to the created PDF chunks.
+        """
         reader = pypdf.PdfReader(pdf_path)
         chunks = []
         
@@ -47,11 +75,24 @@ class PDFSplitter:
 
 
 class GeminiPDFAnalyzer:
-    """Handles Gemini API interactions for PDF analysis"""
+    """
+    Analyzes PDF files using the Gemini API.
+
+    This class can handle large PDF files by splitting them into smaller chunks
+    and processing each chunk individually. The results for each chunk are saved
+    to separate JSON files, and a merged output is also created.
+    """
     
     DEFAULT_MODEL = "gemini-2.5-flash"
 
     def __init__(self, model_name: str = DEFAULT_MODEL):
+        """
+        Initializes the GeminiPDFAnalyzer.
+
+        Args:
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to "gemini-2.5-flash".
+        """
         self.model_name = model_name
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
@@ -84,7 +125,23 @@ class GeminiPDFAnalyzer:
         }
 
     def generate_text(self, pdf_path: str, prompt: str, output_dir: str = None) -> str:
-        """Process PDF and save chunk results to JSON files"""
+        """
+        Analyzes a PDF file and generates a text response.
+
+        This method handles the entire process of splitting the PDF if necessary,
+        processing each chunk with the Gemini API, saving the individual results,
+        and creating a merged output.
+
+        Args:
+            pdf_path (str): The path to the PDF file.
+            prompt (str): The prompt to use for the analysis.
+            output_dir (str, optional): The directory to save the output files.
+                                        If not provided, a directory will be created
+                                        based on the PDF's filename.
+
+        Returns:
+            str: The combined text response from all chunks.
+        """
         pdf_file = pathlib.Path(pdf_path)
         pdf_name = pdf_file.stem
         

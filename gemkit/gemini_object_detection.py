@@ -21,7 +21,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DetectionConfig:
-    """Configuration for the Gemini Object Detection."""
+    """
+    Configuration for the Gemini Object Detection model.
+
+    Attributes:
+        model_name (str): The name of the Gemini model to use.
+        default_prompt (str): The default prompt to use for object detection.
+    """
     model_name: str = "gemini-2.5-flash"
     default_prompt: str = (
         "Identify all prominent objects in this image. "
@@ -32,27 +38,38 @@ class DetectionConfig:
     )
 
 class Object(BaseModel):
-    """Represents a single detected object."""
+    """
+    A Pydantic model representing a single detected object.
+    """
     label: str = Field(..., description="Name of the detected object")
     confidence: Optional[float] = Field(None, description="Detection confidence between 0 and 1")
     bounding_box: List[int] = Field(..., description=f"Bounding box [x_min, y_min, x_max, y_max] in 0-1000 range")
 
 class DetectedObjects(BaseModel):
-    """The root JSON object for the detection response."""
+    """
+    A Pydantic model representing the root JSON object for the detection response.
+    """
     annotated_image_description: str = Field(..., description="A description summarizing the scene and object locations.")
     detected_objects: List[Object] = Field(..., description="List of detected objects with bounding boxes")
 
 
 class GeminiObjectDetection:
+    """
+    Detects objects in an image using the Google Gemini API.
+
+    This class provides a high-level interface for sending an image to the Gemini
+    API and receiving a list of detected objects with their bounding boxes and labels.
+    """
     # Bounding box normalization constant, internal to the class
     _BBOX_NORMALIZATION_RANGE = 1000
 
     def __init__(self, config: Optional[DetectionConfig] = None):
         """
-        Initialize the Gemini client and set up the model.
+        Initializes the GeminiObjectDetection instance.
 
         Args:
-            config: Optional configuration object. If None, default settings are used.
+            config (Optional[DetectionConfig], optional): A configuration object. If not provided,
+                                                          default settings are used.
         """
         self.config = config or DetectionConfig()
         self.client = self._create_client()
@@ -77,8 +94,17 @@ class GeminiObjectDetection:
         img_height: int
     ) -> List[int]:
         """
-        Convert normalized bounding box coordinates (0-1000 range) to absolute pixel coordinates.
-        This corrected logic scales the coordinates directly by the image dimensions.
+        Converts normalized bounding box coordinates to absolute pixel coordinates.
+
+        Args:
+            bbox_normalized (List[float]): A list of four floats representing the
+                                           normalized bounding box `[x_min, y_min, x_max, y_max]`.
+            img_width (int): The width of the image in pixels.
+            img_height (int): The height of the image in pixels.
+
+        Returns:
+            List[int]: A list of four integers representing the absolute bounding
+                       box `[x_min, y_min, x_max, y_max]`.
         """
         if len(bbox_normalized) != 4:
             raise ValueError("Bounding box must have exactly 4 values [x_min, y_min, x_max, y_max]")
@@ -265,12 +291,22 @@ class GeminiObjectDetection:
         objects_to_detect: Optional[List[str]] = None
     ) -> Tuple[Dict[str, Any], Optional[Image.Image]]:
         """
-        Detect objects in an image using the Gemini API.
+        Detects objects in an image.
+
+        This method takes an image source (file path or URL), an optional prompt,
+        and an optional list of objects to detect. It returns a dictionary
+        containing the detection results and the PIL Image object.
+
+        Args:
+            image_source (str): The path or URL to the image.
+            prompt (Optional[str], optional): A custom prompt to guide the detection.
+            objects_to_detect (Optional[List[str]], optional): A list of specific objects
+                                                               to detect.
 
         Returns:
-            Tuple containing:
-                - Dict with detection results or error information (never None)
-                - PIL Image object if successful, None if error occurred
+            Tuple[Dict[str, Any], Optional[Image.Image]]: A tuple containing a dictionary
+                                                          with the detection results and
+                                                          the PIL Image object.
         """
         if not self.client:
             return {"error": "Gemini client is not initialized"}, None

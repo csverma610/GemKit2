@@ -1,26 +1,48 @@
 
-m google import genai
+"""
+A script to extract text from a URL using the Gemini API.
+
+This script takes a URL as a command-line argument, sends it to the Gemini
+model, and prints the extracted text.
+
+Usage:
+    python gemini_url_text.py <URL>
+"""
+
+import sys
+from google import genai
 from google.genai.types import Tool, GenerateContentConfig
 
-client = genai.Client()
-model_id = "gemini-2.5-flash"
+def main():
+    """
+    The main function for the URL text extraction script.
+    """
+    if len(sys.argv) < 2:
+        print("Usage: python gemini_url_text.py <URL>")
+        sys.exit(1)
 
-tools = [
-  {"url_context": {}},
-]
+    client = genai.Client()
+    model_id = "gemini-2.5-flash"
 
-url1 = sys.argv[1]
+    tools = [
+      {"url_context": {}},
+    ]
 
-response = client.models.generate_content(
-    model=model_id,
-    contents=f"Extract the medical information from {url}",
-    config=GenerateContentConfig(
-        tools=tools,
+    url = sys.argv[1]
+
+    response = client.models.generate_content(
+        model=model_id,
+        contents=f"Extract the medical information from {url}",
+        config=GenerateContentConfig(
+            tools=tools,
+        )
     )
-)
 
-for each in response.candidates[0].content.parts:
-    print(each.text)
+    for each in response.candidates[0].content.parts:
+        print(each.text)
 
-# For verification, you can inspect the metadata to see which URLs the model retrieved
-print(response.candidates[0].url_context_metadata)
+    # For verification, you can inspect the metadata to see which URLs the model retrieved
+    print(response.candidates[0].url_context_metadata)
+
+if __name__ == "__main__":
+    main()

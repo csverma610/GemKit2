@@ -16,7 +16,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BoundingBox:
-    """Represents a bounding box with coordinates and metadata."""
+    """
+    Represents a bounding box with coordinates, a label, and a confidence score.
+
+    Attributes:
+        x_min (int): The minimum x-coordinate (left edge) of the bounding box.
+        y_min (int): The minimum y-coordinate (top edge) of the bounding box.
+        x_max (int): The maximum x-coordinate (right edge) of the bounding box.
+        y_max (int): The maximum y-coordinate (bottom edge) of the bounding box.
+        label (str): The label associated with the object within the bounding box.
+        confidence (float): The confidence score of the detection, typically between 0 and 1.
+        color (Optional[Tuple[int, int, int]]): The RGB color of the bounding box. 
+                                                 If None, a color will be assigned automatically.
+    """
     x_min: int
     y_min: int
     x_max: int
@@ -28,14 +40,12 @@ class BoundingBox:
 
 class AnnotateImage:
     """
-    A class for annotating images with bounding boxes and text.
+    A utility for drawing bounding boxes, labels, and other annotations on images.
 
-    Features:
-    - Draw multiple bounding boxes with customizable styles
-    - Add labels with confidence scores
-    - Support for different fonts and text sizes
-    - Automatic color assignment for different labels
-    - Save annotated images with timestamps
+    This class provides a fluent interface for loading an image, drawing multiple
+    bounding boxes with customizable styles, and saving or displaying the result.
+    It automatically handles color assignments for different labels and supports
+    various fonts and text sizes.
     """
 
     # Default color palette for bounding boxes (RGB)
@@ -62,12 +72,15 @@ class AnnotateImage:
         output_dir: str = "annotated_images"
     ) -> None:
         """
-        Initialize the AnnotateImage class.
+        Initializes the AnnotateImage instance.
 
         Args:
-            image_path: Path to the input image file
-            image: PIL Image object (alternative to image_path)
-            output_dir: Directory to save annotated images
+            image_path (str, optional): The file path to the input image.
+            image (Image.Image, optional): A PIL Image object. If provided, `image_path` is ignored.
+            output_dir (str, optional): The directory where annotated images will be saved.
+
+        Raises:
+            ValueError: If neither `image_path` nor `image` is provided.
         """
         if image_path:
             self.image = Image.open(image_path).convert('RGB')
@@ -121,16 +134,22 @@ class AnnotateImage:
         font_size: Optional[int] = None
     ) -> 'AnnotateImage':
         """
-        Draw tight bounding boxes on the image with improved visualization.
+        Draws bounding boxes on the image.
+
+        This method iterates through a list of bounding boxes and draws them on the
+        image, optionally including labels. It handles color assignment and ensures
+        that the boxes are drawn within the image boundaries.
 
         Args:
-            boxes: List of BoundingBox objects or dictionaries with box data
-            draw_labels: Whether to draw labels on the boxes
-            line_width: Width of the box border
-            font_size: Font size for labels (uses default if None)
+            boxes (List[Union[BoundingBox, Dict]]): A list of `BoundingBox` objects or dictionaries
+                                                     containing bounding box data.
+            draw_labels (bool, optional): Whether to draw labels on the boxes. Defaults to True.
+            line_width (int, optional): The width of the bounding box borders. Defaults to 2.
+            font_size (Optional[int], optional): The font size for the labels. 
+                                                 If None, the default size is used.
 
         Returns:
-            self for method chaining
+            AnnotateImage: The instance of the class, allowing for method chaining.
         """
         font = self._get_default_font(font_size) if font_size else self.font
 
@@ -273,13 +292,16 @@ class AnnotateImage:
 
     def save(self, output_path: Optional[str] = None) -> str:
         """
-        Save the annotated image.
+        Saves the annotated image to a file.
+
+        If no `output_path` is provided, a new filename is generated based on the
+        current timestamp and the image is saved in the `output_dir`.
 
         Args:
-            output_path: Full path to save the image. If None, generates a filename.
+            output_path (str, optional): The full path where the image will be saved.
 
         Returns:
-            Path to the saved image
+            str: The path to the saved image.
         """
         if output_path is None:
             # Create output directory if it doesn't exist
@@ -297,14 +319,24 @@ class AnnotateImage:
         return output_path
 
     def show(self) -> None:
-        """Display the annotated image (for Jupyter notebooks)."""
+        """
+        Displays the annotated image.
+
+        This method is primarily intended for use in interactive environments like
+        Jupyter notebooks.
+        """
         try:
             self.image.show()
         except Exception as e:
             logger.error(f"Could not display image: {e}")
 
     def get_image(self) -> Image.Image:
-        """Get the annotated PIL Image object."""
+        """
+        Returns the annotated PIL Image object.
+
+        Returns:
+            Image.Image: The annotated image.
+        """
         return self.image
 
     @classmethod
@@ -315,15 +347,20 @@ class AnnotateImage:
         output_dir: str = "annotated_images"
     ) -> 'AnnotateImage':
         """
-        Create an AnnotateImage instance from Gemini detection results.
+        Creates an `AnnotateImage` instance from Gemini object detection results.
+
+        This class method provides a convenient way to visualize the output of a
+        Gemini object detection model. It parses the detection results, creates
+        `BoundingBox` objects, and draws them on the image.
 
         Args:
-            image_path: Path to the original image
-            detection_results: Detection results from GeminiObjectDetection
-            output_dir: Directory to save annotated images
+            image_path (str): The path to the original image.
+            detection_results (Dict): The detection results from a Gemini model,
+                                      expected to contain a 'detected_objects' key.
+            output_dir (str, optional): The directory where annotated images will be saved.
 
         Returns:
-            Annotated image instance
+            AnnotateImage: A new instance with the bounding boxes drawn on the image.
         """
         annotator = cls(image_path=image_path, output_dir=output_dir)
 

@@ -491,6 +491,14 @@ For EACH inconsistency:
 
 
 class GeminiPDFProofreader(PDFAnalysisClient):
+    """
+    A comprehensive proofreading tool for academic papers in PDF format,
+    leveraging the Gemini API for detailed, section-by-section analysis.
+
+    This class provides methods to perform a full proofreading analysis, focusing
+    on aspects like clarity, logical flow, and publishability, as well as targeted
+    analysis of specific sections or issues.
+    """
     DEFAULT_MODEL = "gemini-2.5-flash"
 
     SECTION_ANALYSIS_CONFIG = {
@@ -568,14 +576,13 @@ class GeminiPDFProofreader(PDFAnalysisClient):
     }
 
     def __init__(self, model_name: str = DEFAULT_MODEL, journal: str = "generic"):
-        """Initialize proofreader with model and journal style.
+        """
+        Initializes the GeminiPDFProofreader.
 
         Args:
-            model_name: Gemini model to use
-            journal: Target journal style (apa, ieee, nature, generic)
-
-        Raises:
-            ValueError: If journal style is not supported
+            model_name (str, optional): The name of the Gemini model to use.
+            journal (str, optional): The target journal style for the proofreading.
+                                     Supported styles: 'apa', 'ieee', 'nature', 'generic'.
         """
         super().__init__(model_name)
 
@@ -824,14 +831,15 @@ Return as JSON array where each element follows this structure:
 
     def proofread(self) -> ProofreadingReport:
         """
-        Perform comprehensive proofreading on the uploaded PDF with prioritized feedback.
-        Orchestrates multiple focused API calls to analyze all sections.
+        Performs a comprehensive proofreading of the uploaded PDF.
+
+        This method orchestrates a series of focused API calls to analyze the
+        document section by section, as well as to identify general issues.
+        It then compiles the results into a single, structured report.
 
         Returns:
-            ProofreadingReport: Structured proofreading results with impact-ranked issues
-
-        Raises:
-            RuntimeError: If no PDF is loaded or API returns an error
+            ProofreadingReport: A Pydantic model containing the detailed
+                                proofreading analysis.
         """
         self._check_pdf_loaded()
         logger.info("Starting comprehensive proofreading analysis...")
@@ -864,7 +872,14 @@ Return as JSON array where each element follows this structure:
 
     def proofread_section(self, section_focus: str) -> str:
         """
-        Perform targeted proofreading on a specific aspect of the paper.
+        Performs a targeted proofreading of a specific section or aspect of the paper.
+
+        Args:
+            section_focus (str): The name of the section or aspect to focus on.
+                                 Supported values are defined in `ProofreadingPrompts.SECTION_PROMPTS`.
+
+        Returns:
+            str: The text response from the Gemini model.
         """
         section_lower = section_focus.lower()
         if section_lower not in ProofreadingPrompts.SECTION_PROMPTS:

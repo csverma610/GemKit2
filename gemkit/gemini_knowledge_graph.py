@@ -4,17 +4,18 @@ from gemini_client import GeminiClient
 
 def generate_kg_prompt(document_text: str) -> str:
     """
-    Generates a structured prompt designed to instruct an LLM to create a
-    Knowledge Graph from a given document.
+    Generates a structured prompt for creating a Knowledge Graph from a document.
 
-    The prompt specifies the required components (Nodes, Edges, Attributes)
-    and the desired output format (Triples and Entity Attributes).
+    This function creates a detailed prompt that instructs a language model to
+    extract entities, relationships, and attributes from a given text and format
+    them as a list of triples and entity attributes.
 
     Args:
-        document_text: The source text from which the knowledge graph should be generated.
+        document_text (str): The source text from which the knowledge graph
+                             should be generated.
 
     Returns:
-        A formatted string containing the full prompt.
+        str: A formatted string containing the full prompt.
     """
 
     # Define the core instructions for the Knowledge Graph generation
@@ -44,7 +45,10 @@ def generate_kg_prompt(document_text: str) -> str:
 
     return full_prompt.strip()
 
-if __name__ == "__main__":
+def main():
+    """
+    An example of how to use the `generate_kg_prompt` function.
+    """
     sample_document = (
         "Project Astra, an initiative by Google DeepMind, was announced in May 2024. "
         "It aims to create a universal AI assistant capable of understanding and "
@@ -58,5 +62,8 @@ if __name__ == "__main__":
     llm = GeminiClient()
     text = llm.generate_text(prompt)
     print(text)
+
+if __name__ == "__main__":
+    main()
 
 

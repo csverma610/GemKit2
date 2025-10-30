@@ -27,28 +27,24 @@ def _get_logger(name: str):
 
 
 class PDFAnalysisClient:
-    """Base class for PDF document analysis with Gemini API.
+    """
+    A base class for analyzing PDF documents using the Gemini API.
 
-    Provides shared functionality for:
-    - PDF file validation and upload
-    - Gemini API client management
-    - Response validation and error handling
-    - Context manager support for cleanup
-
-    Subclasses should implement specific analysis methods.
+    This class provides a foundation for building PDF analysis tools by handling
+    common tasks such as API client initialization, PDF file validation and upload,
+    and response validation. It is designed to be subclassed by more specific
+    analysis tools.
     """
 
     DEFAULT_MODEL = "gemini-2.5-flash"
 
     def __init__(self, model_name: str = DEFAULT_MODEL):
-        """Initialize PDF analysis client.
+        """
+        Initializes the PDFAnalysisClient.
 
         Args:
-            model_name: Gemini model to use (default: gemini-2.5-flash)
-
-        Raises:
-            ValueError: If GEMINI_API_KEY environment variable not set
-            ConnectionError: If Gemini client initialization fails
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to "gemini-2.5-flash".
         """
         self.model_name = model_name
         self.uploaded_file = None
@@ -114,14 +110,14 @@ class PDFAnalysisClient:
         return pdf_path
 
     def load_pdf(self, pdf_file: str):
-        """Load and upload a PDF file to Gemini.
+        """
+        Uploads a PDF file to the Gemini service.
+
+        If a file is already uploaded, it will be deleted before the new file
+        is uploaded.
 
         Args:
-            pdf_file: Path to the PDF file to upload
-
-        Raises:
-            FileNotFoundError: If file doesn't exist
-            ValueError: If file is not a PDF
+            pdf_file (str): The path to the PDF file.
         """
         if self.uploaded_file:
             self.delete_pdf()
@@ -136,7 +132,12 @@ class PDFAnalysisClient:
         self.logger.info(f"✓ PDF uploaded: {pdf_path.name}")
 
     def delete_pdf(self):
-        """Delete the uploaded PDF file from Gemini."""
+        """
+        Deletes the currently uploaded PDF file from the Gemini service.
+
+        It is important to call this method when you are finished with a PDF
+        file to avoid unnecessary storage costs.
+        """
         if self.uploaded_file:
             try:
                 self.client.files.delete(name=self.uploaded_file.name)

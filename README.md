@@ -1,42 +1,53 @@
-# GemKit - Gemini PDF Chat & Paper Reviewer
+# GemKit - Your Comprehensive Generative AI Toolkit
+
+GemKit is a powerful, multi-modal toolkit designed to leverage the capabilities of Google's Gemini API across a wide range of applications. From analyzing complex documents and academic papers to processing audio, video, and images, GemKit provides both ready-to-use command-line tools and flexible Python modules for your generative AI projects.
+
+## Core Features
+
+- **Multi-modal Analysis**: Work with PDFs, audio files, videos, and images.
+- **Structured Output**: Leverage Pydantic for reliable, schema-driven outputs.
+- **Command-Line & Programmatic Use**: Use the tools directly from your terminal or import them into your own Python scripts.
+- **Extensible**: Built with a modular design that's easy to extend.
+
+## Available Tools
+
+### PDF & Paper Analysis
 
 A comprehensive toolkit for interacting with PDF documents using Google's Gemini API, with advanced structured output support for academic paper reviews.
 
-## Features
-
-### 1. **PDF Paper Reviewer** (`pdf_paper_reviewer.py`)
+### 1. **PDF Paper Reviewer** (`gemkit/cli_paper_reviewer.py`)
 Integrated tool combining PDF chat and structured paper reviews.
 
 #### Review Command
 Generate a comprehensive academic paper review with structured output:
 ```bash
-python pdf_paper_reviewer.py review -i paper.pdf
-python pdf_paper_reviewer.py review -i paper.pdf --model gemini-1.5-pro
-python pdf_paper_reviewer.py review -i paper.pdf -o review.json
+python -m gemkit.cli_paper_reviewer review -i paper.pdf
+python -m gemkit.cli_paper_reviewer review -i paper.pdf --model gemini-1.5-pro
+python -m gemkit.cli_paper_reviewer review -i paper.pdf -o review.json
 ```
 
 #### Chat Command
 Start an interactive chat session with a PDF:
 ```bash
-python pdf_paper_reviewer.py chat -i paper.pdf
-python pdf_paper_reviewer.py chat -i paper.pdf -q "Summarize the methodology"
-python pdf_paper_reviewer.py chat -i paper.pdf --model gemini-1.5-pro
+python -m gemkit.cli_paper_reviewer chat -i paper.pdf
+python -m gemkit.cli_paper_reviewer chat -i paper.pdf -q "Summarize the methodology"
+python -m gemkit.cli_paper_reviewer chat -i paper.pdf --model gemini-1.5-pro
 ```
 
-### 2. **PDF Chat** (`gemini_pdf_chat.py`)
+### 2. **PDF Chat** (`gemkit/gemini_pdf_chat.py`)
 Lightweight PDF chat interface for casual questions and discussions.
 
 ```bash
-python gemini_pdf_chat.py -i document.pdf
-python gemini_pdf_chat.py -i document.pdf -q "What is the main contribution?"
-python gemini_pdf_chat.py -i document.pdf --model gemini-1.5-pro
+python -m gemkit.gemini_pdf_chat -i document.pdf
+python -m gemkit.gemini_pdf_chat -i document.pdf -q "What is the main contribution?"
+python -m gemkit.gemini_pdf_chat -i document.pdf --model gemini-1.5-pro
 ```
 
-### 3. **Paper Reviewer** (`paper_reviewer.py`)
+### 3. **Paper Reviewer** (`gemkit/paper_reviewer.py`)
 Pydantic models and logic for comprehensive academic paper reviews. Can be used programmatically or imported into other scripts.
 
 ```python
-from paper_reviewer import ComprehensivePaperReview, review_paper_with_gemini
+from gemkit.paper_reviewer import ComprehensivePaperReview, review_paper_with_gemini
 
 # Review a paper
 review = review_paper_with_gemini(paper_content)
@@ -47,6 +58,84 @@ print(review.overall_assessment.strengths)
 with open("review.json", "w") as f:
     f.write(review.model_dump_json(indent=2))
 ```
+
+### Audio Analysis
+
+Tools for processing and analyzing audio files.
+
+### Video Analysis
+
+Tools for processing and analyzing video files.
+
+### Image Analysis & Generation
+
+Tools for analyzing, editing, and generating images.
+
+#### 1. **Image Generation** (`gemkit/gemini_image_generation.py`)
+Generate images from a text prompt.
+
+**Command-Line Usage:**
+```bash
+python -m gemkit.gemini_image_generation -p "A futuristic cityscape at sunset" -o cityscape.png
+```
+
+**Programmatic Usage:**
+```python
+from gemkit.gemini_image_generation import GeminiImageGenerator
+
+generator = GeminiImageGenerator()
+result = generator.generate_image(
+    prompt="A surreal landscape with floating islands",
+    output_filename="surreal_landscape.png"
+)
+if result["filepath"]:
+    print(f"Image saved to {result['filepath']}")
+```
+
+#### 2. **Image Editing** (`gemkit/gemini_image_edition.py`)
+Edit an existing image based on a text prompt.
+
+**Command-Line Usage:**
+```bash
+python -m gemkit.gemini_image_edition -i "path/to/your/image.png" -p "Add a cat sitting on the grass" -o "edited_image.png"
+```
+
+**Programmatic Usage:**
+```python
+from gemkit.gemini_image_edition import GeminiImageEditor
+
+editor = GeminiImageEditor()
+result = editor.edit_image(
+    source="path/to/your/image.png",
+    prompt="Change the color of the car to blue",
+    output_filename="blue_car.png"
+)
+if result["filepath"]:
+    print(f"Edited image saved to {result['filepath']}")
+```
+
+#### 3. **Image Segmentation** (`gemkit/gemini_image_segmentation.py`)
+Generate segmentation masks for objects in an image.
+
+**Command-Line Usage:**
+```bash
+python -m gemkit.gemini_image_segmentation -s "path/to/your/image.png" --objects "cat,dog"
+```
+
+**Programmatic Usage:**
+```python
+from gemkit.gemini_image_segmentation import GeminiImageSegmentation
+from PIL import Image
+
+segmenter = GeminiImageSegmentation()
+image = Image.open("path/to/your/image.png")
+result = segmenter.segment_image(
+    image=image,
+    objects_to_segment=["person", "bicycle"]
+)
+print(result)
+```
+
 
 ## Setup
 

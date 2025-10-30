@@ -359,41 +359,21 @@ class SourceConfig:
 
 class ImageSource:
     """
-    Unified class to handle multiple image sources for multimodal LLM APIs.
-    
-    Examples:
-        # Image file
-        source = ImageSource('photo.jpg')
-        result = source.get_image()
-        
-        # Directory batch processing
-        config = SourceConfig(recursive=True, batch_size=10)
-        source = ImageSource('./images', config)
-        while source.has_more_images():
-            images = source.get_images()
-        
-        # Video frames
-        config = SourceConfig(video_num_frames=10)
-        source = ImageSource('video.mp4', config)
-        frames = source.get_images()
-        
-        # Camera
-        source = ImageSource(0)  # Camera 0
-        result = source.get_image()
-        
-        # URL
-        source = ImageSource('https://example.com/image.jpg')
-        result = source.get_image()
+    A unified class for handling various image sources.
+
+    This class provides a consistent interface for loading images from different
+    sources, such as files, directories, URLs, cameras, and more. It can
+    also convert the images to different formats like base64, PIL, or NumPy.
     """
     
     def __init__(self, source: Union[str, Path, Image.Image, np.ndarray, bytes, int] = None, 
                  config: Optional[SourceConfig] = None):
         """
-        Initialize ImageSource.
-        
+        Initializes the ImageSource.
+
         Args:
-            source: Image source (file, directory, URL, camera index, PIL Image, etc.)
-            config: SourceConfig object with settings
+            source (Union[str, Path, Image.Image, np.ndarray, bytes, int], optional): The image source.
+            config (Optional[SourceConfig], optional): A configuration object.
         """
         self.source = source
         self.source_type = None
@@ -439,14 +419,10 @@ class ImageSource:
     
     def get_image(self) -> ImageResult:
         """
-        Get a single image from the current source.
-        
+        Retrieves a single image from the current source.
+
         Returns:
-            ImageResult object
-        
-        Raises:
-            SourceNotSetError: If no source is set
-            UnsupportedOperationError: If used with directory source
+            ImageResult: An object containing the image data and metadata.
         """
         if self.source is None:
             raise SourceNotSetError("No source set. Call set_source() first.")
@@ -466,15 +442,12 @@ class ImageSource:
     
     def get_images(self) -> List[ImageResult]:
         """
-        Get multiple images from the current source (batch operation).
-        
-        Supported for: directory, video, camera
-        
+        Retrieves a batch of images from the current source.
+
+        This method is supported for directory, video, and camera sources.
+
         Returns:
-            List of ImageResult objects
-        
-        Raises:
-            UnsupportedOperationError: If source doesn't support batch operations
+            List[ImageResult]: A list of `ImageResult` objects.
         """
         if self.source is None:
             raise SourceNotSetError("No source set. Call set_source() first.")
@@ -492,9 +465,12 @@ class ImageSource:
     
     def has_more_images(self) -> bool:
         """
-        Check if there are more images available.
-        
-        Supported for: directory, video
+        Checks if there are more images available from the current source.
+
+        This method is supported for directory and video sources.
+
+        Returns:
+            bool: `True` if there are more images, `False` otherwise.
         """
         if self.source_type == "directory":
             if self._directory_files is None:
@@ -507,7 +483,11 @@ class ImageSource:
         return False
     
     def reset(self):
-        """Reset to start from the beginning (directory, video)."""
+        """
+        Resets the source to its beginning.
+
+        This method is supported for directory and video sources.
+        """
         if self.source_type == "directory":
             self._directory_index = 0
         elif self.source_type == "video_file":
@@ -520,7 +500,12 @@ class ImageSource:
         return self
     
     def get_info(self) -> dict:
-        """Get information about the current source."""
+        """
+        Retrieves information about the current source.
+
+        Returns:
+            dict: A dictionary containing information about the source.
+        """
         info = {
             'source_type': self.source_type,
             'output_type': self.config.output_type.value,
@@ -550,7 +535,13 @@ class ImageSource:
     
     def set_source(self, source: Union[str, Path, Image.Image, np.ndarray, bytes, int], 
                    config: Optional[SourceConfig] = None):
-        """Set or change the source."""
+        """
+        Sets or changes the image source.
+
+        Args:
+            source (Union[str, Path, Image.Image, np.ndarray, bytes, int]): The new image source.
+            config (Optional[SourceConfig], optional): A new configuration object.
+        """
         self._cleanup()
         self.source = source
         self.source_type = self._identify_source_type(source)
@@ -563,7 +554,12 @@ class ImageSource:
         return self
     
     def set_config(self, config: SourceConfig):
-        """Update configuration."""
+        """
+        Updates the configuration for the image source.
+
+        Args:
+            config (SourceConfig): The new configuration object.
+        """
         self.config = config
         if self.source_type == "directory":
             self._directory_files = None
@@ -571,7 +567,12 @@ class ImageSource:
         return self
     
     def set_camera(self, camera_index: int = 0):
-        """Set source to camera."""
+        """
+        Sets the image source to a camera.
+
+        Args:
+            camera_index (int, optional): The index of the camera to use.
+        """
         self._cleanup()
         self.source = camera_index
         self.source_type = "camera"
@@ -579,7 +580,12 @@ class ImageSource:
         return self
     
     def set_video(self, video_path: Union[str, Path]):
-        """Set source to video file."""
+        """
+        Sets the image source to a video file.
+
+        Args:
+            video_path (Union[str, Path]): The path to the video file.
+        """
         self._cleanup()
         video_path = Path(video_path)
         if not video_path.exists():
@@ -597,7 +603,16 @@ class ImageSource:
     def set_directory(self, directory_path: Union[str, Path], recursive: bool = False,
                      extensions: Optional[List[str]] = None, max_images: Optional[int] = None,
                      batch_size: int = 10):
-        """Set source to directory."""
+        """
+        Sets the image source to a directory.
+
+        Args:
+            directory_path (Union[str, Path]): The path to the directory.
+            recursive (bool, optional): Whether to search for images recursively.
+            extensions (Optional[List[str]], optional): A list of file extensions to include.
+            max_images (Optional[int], optional): The maximum number of images to load.
+            batch_size (int, optional): The number of images to retrieve in each batch.
+        """
         self._cleanup()
         self.source = directory_path
         self.source_type = "directory"
@@ -612,7 +627,9 @@ class ImageSource:
         return self
     
     def set_screenshot(self):
-        """Set source to screenshot capture."""
+        """
+        Sets the image source to a screenshot.
+        """
         self._cleanup()
         self.source = "screenshot"
         self.source_type = "screenshot"
@@ -620,10 +637,12 @@ class ImageSource:
     
     def get_video_info(self) -> VideoInfo:
         """
-        Get video information (only for video sources).
-        
+        Retrieves metadata about the video source.
+
+        This method is only supported for video sources.
+
         Returns:
-            VideoInfo object with metadata
+            VideoInfo: An object containing the video's metadata.
         """
         if self.source_type != "video_file":
             raise UnsupportedOperationError("get_video_info() only works with video sources")
@@ -632,11 +651,18 @@ class ImageSource:
         return self._video.get_video_info()
     
     def get_source_type(self) -> str:
-        """Get the type of the current source."""
+        """
+        Returns the type of the current image source.
+
+        Returns:
+            str: The source type (e.g., 'directory', 'video_file', 'camera').
+        """
         return self.source_type
     
     def close(self):
-        """Close and release all resources."""
+        """
+        Closes and releases any open resources, such as camera or video files.
+        """
         self._cleanup()
     
     # ========================================================================

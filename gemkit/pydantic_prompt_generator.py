@@ -31,24 +31,13 @@ class SchemaValidationError(Exception):
 
 class PydanticPromptGenerator:
     """
-    Generates detailed prompts for LLMs from Pydantic BaseModel schemas.
-    
-    This generator creates human-readable prompts that instruct language models
-    to return JSON objects conforming to Pydantic model schemas. It handles
-    nested models, validation constraints, enums, and complex types.
-    
-    Attributes:
-        model: The Pydantic BaseModel class
-        schema: The JSON schema derived from the model
-        style: The prompt generation style
-        include_examples: Whether to include example JSON in prompts
-        
-    Example:
-        >>> class User(BaseModel):
-        ...     name: str
-        ...     age: int
-        >>> generator = PydanticPromptGenerator(User)
-        >>> prompt = generator.generate_prompt()
+    Generates detailed, human-readable prompts for language models from Pydantic
+    BaseModel schemas.
+
+    This class inspects a Pydantic model and creates a prompt that instructs a
+    language model to return a JSON object conforming to the model's schema. It
+    handles nested models, validation constraints, enums, and complex types,
+    making it easier to achieve structured output from LLMs.
     """
     
     # Supported constraint mappings
@@ -73,17 +62,16 @@ class PydanticPromptGenerator:
         validate_schema: bool = True
     ):
         """
-        Initializes the prompt generator with a Pydantic model.
+        Initializes the PydanticPromptGenerator.
 
         Args:
-            model: The Pydantic BaseModel class (not an instance)
-            style: The prompt generation style
-            include_examples: Whether to include example JSON structures
-            validate_schema: Whether to validate the schema on initialization
-            
-        Raises:
-            TypeError: If model is not a Pydantic BaseModel class
-            SchemaValidationError: If schema validation fails
+            model (Type[BaseModel]): The Pydantic BaseModel class (not an instance) to
+                                     generate the prompt from.
+            style (PromptStyle, optional): The style of the generated prompt.
+            include_examples (bool, optional): Whether to include an example JSON object
+                                               in the prompt.
+            validate_schema (bool, optional): Whether to validate the generated schema
+                                              on initialization.
         """
         self._validate_model_type(model)
         
@@ -355,14 +343,11 @@ class PydanticPromptGenerator:
     
     def generate_prompt(self) -> str:
         """
-        Generates the full prompt string based on the configured style.
+        Generates a prompt string based on the configured style.
 
         Returns:
-            A string prompt that instructs the model to return a JSON object
-            conforming to the model's schema
-            
-        Raises:
-            ValueError: If an unsupported prompt style is configured
+            str: A prompt that instructs a language model to return a JSON object
+                 conforming to the Pydantic model's schema.
         """
         try:
             # Generate main prompt based on style
@@ -586,17 +571,19 @@ class PydanticPromptGenerator:
     
     def validate_response(self, response_json: Union[str, Dict[str, Any]]) -> BaseModel:
         """
-        Validates a JSON response against the model schema.
-        
+        Validates a JSON response against the Pydantic model's schema.
+
         Args:
-            response_json: JSON string or dictionary to validate
-            
+            response_json (Union[str, Dict[str, Any]]): The JSON response to validate,
+                                                        as a string or a dictionary.
+
         Returns:
-            Validated Pydantic model instance
-            
+            BaseModel: An instance of the Pydantic model, populated with the
+                       validated data.
+
         Raises:
-            ValidationError: If the response doesn't conform to the schema
-            json.JSONDecodeError: If response_json is an invalid JSON string
+            ValidationError: If the response does not conform to the schema.
+            json.JSONDecodeError: If `response_json` is an invalid JSON string.
         """
         if isinstance(response_json, str):
             data = json.loads(response_json)
@@ -611,22 +598,22 @@ class PydanticPromptGenerator:
     
     def get_schema_dict(self) -> Dict[str, Any]:
         """
-        Returns the JSON schema as a dictionary.
-        
+        Returns the JSON schema of the Pydantic model as a dictionary.
+
         Returns:
-            The complete JSON schema dictionary
+            Dict[str, Any]: The JSON schema.
         """
         return self.schema.copy()
     
     def get_schema_json(self, indent: int = 2) -> str:
         """
-        Returns the JSON schema as a formatted JSON string.
-        
+        Returns the JSON schema of the Pydantic model as a formatted string.
+
         Args:
-            indent: Indentation level for JSON formatting
-            
+            indent (int, optional): The indentation level for the JSON string.
+
         Returns:
-            Formatted JSON schema string
+            str: The formatted JSON schema.
         """
         return json.dumps(self.schema, indent=indent)
     

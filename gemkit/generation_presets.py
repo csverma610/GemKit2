@@ -77,16 +77,22 @@ QA = {
 
 def get_preset(preset_name: str) -> dict:
     """
-    Get a generation preset by name.
+    Retrieves a generation preset by its name.
+
+    This function provides a convenient way to access predefined sets of
+    generation parameters for different use cases, such as deterministic
+    output, creative writing, or code generation.
 
     Args:
-        preset_name: Name of the preset (case-insensitive)
+        preset_name (str): The name of the preset to retrieve. This is
+                           case-insensitive.
 
     Returns:
-        Dictionary with temperature, top_p, and top_k settings
+        dict: A dictionary containing the generation parameters for the
+              specified preset.
 
     Raises:
-        ValueError: If preset_name is not recognized
+        ValueError: If the specified `preset_name` is not recognized.
     """
     presets = {
         'deterministic': DETERMINISTIC,

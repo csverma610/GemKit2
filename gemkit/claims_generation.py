@@ -11,29 +11,46 @@ from google import genai
 
 # Custom Exceptions
 class ClaimsGenerationError(Exception):
-    """Base exception for claims generation errors."""
+    """Base exception for errors that occur during the claims generation process."""
     pass
 
 
 class FileSizeLimitError(ClaimsGenerationError):
-    """Raised when file size exceeds the limit."""
+    """Raised when the size of an input file exceeds the configured maximum limit."""
     pass
 
 
 class APIError(ClaimsGenerationError):
-    """Raised when API request fails."""
+    """Raised when a request to the Gemini API fails after all retry attempts."""
     pass
 
 
 class InvalidResponseError(ClaimsGenerationError):
-    """Raised when API response is invalid or empty."""
+    """Raised when the API returns a response that is empty or in an unexpected format."""
     pass
 
 
 # Configuration
 @dataclass
 class ClaimsConfig:
-    """Configuration settings for claims generation."""
+    """
+    Configuration settings for the ClaimsGenerator.
+
+    Attributes:
+        model (str): The name of the Gemini model to use for generating claims.
+        max_claims (Optional[int]): The maximum number of claims to generate. If None, no limit is applied.
+        max_file_size_mb (int): The maximum allowed file size in megabytes.
+        max_retries (int): The maximum number of times to retry a failed API call.
+        chunk_size_chars (int): The size of text chunks (in characters) to be processed by the model.
+        retry_delay_seconds (int): The initial delay in seconds between API call retries.
+        log_file (str): The path to the log file.
+        log_level (str): The logging level (e.g., 'INFO', 'DEBUG').
+        log_file_max_bytes (int): The maximum size of the log file in bytes before rotation.
+        log_file_backup_count (int): The number of backup log files to keep.
+        chunk_overlap_chars (int): The number of characters to overlap between consecutive text chunks.
+        similarity_length_threshold (int): The character length difference threshold for considering two claims similar.
+        similarity_word_overlap_ratio (float): The word overlap ratio for considering two claims similar.
+    """
     model: str = "gemini-2.5-flash"
     max_claims: Optional[int] = None
     max_file_size_mb: int = 10
@@ -51,15 +68,20 @@ class ClaimsConfig:
 
 class ClaimsGenerator:
     """
-    A class to generate verifiable claims from text using Google's Gemini API.
+    Generates verifiable claims from a given text using the Google Gemini API.
+
+    This class handles reading text from files, splitting large texts into manageable chunks,
+    making API calls with retry logic, and parsing the generated claims from the API response.
+    It also includes functionality for deduplicating similar claims.
     """
 
     def __init__(self, config: ClaimsConfig = None):
         """
-        Initialize the ClaimsGenerator with configuration.
+        Initializes the ClaimsGenerator.
 
         Args:
-            config: Configuration object. If not provided, uses default ClaimsConfig values.
+            config (ClaimsConfig, optional): A configuration object. If not provided,
+                                             default settings are used.
         """
         self.config = config if config is not None else ClaimsConfig()
         self.client = genai.Client()
@@ -72,18 +94,18 @@ class ClaimsGenerator:
 
     def read_file(self, filename: str) -> str:
         """
-        Read content from a file with size validation.
+        Reads the content of a file and validates its size.
 
         Args:
-            filename: Path to the file to read
+            filename (str): The path to the file.
 
         Returns:
-            The content of the file as a string
+            str: The content of the file.
 
         Raises:
-            FileNotFoundError: If the file doesn't exist
-            FileSizeLimitError: If file size exceeds the limit
-            ClaimsGenerationError: If file has encoding errors
+            FileNotFoundError: If the file does not exist.
+            FileSizeLimitError: If the file size exceeds the configured limit.
+            ClaimsGenerationError: If there is an error reading the file.
         """
         self.logger.info(f"Reading file: {filename}")
 
@@ -347,18 +369,21 @@ class ClaimsGenerator:
 
     def generate_text(self, text: str) -> list[str]:
         """
-        Generate verifiable claims from the given text.
-        Large texts are split into chunks and processed separately.
+        Generates verifiable claims from a given text.
+
+        This method takes a string of text, splits it into chunks if necessary,
+        and then calls the Gemini API to generate a list of verifiable claims.
+        The claims are then deduplicated and returned.
 
         Args:
-            text: The input text to extract claims from
+            text (str): The input text from which to generate claims.
 
         Returns:
-            List of verifiable claims
+            list[str]: A list of unique, verifiable claims.
 
         Raises:
-            APIError: If API calls fail
-            InvalidResponseError: If API response is invalid or no claims generated
+            APIError: If the API call fails after all retries.
+            InvalidResponseError: If the API returns an empty or invalid response.
         """
         self.logger.info(f"Generating claims from text ({len(text)} characters)")
 
@@ -396,20 +421,15 @@ class ClaimsGenerator:
 
     def generate_claims_from_file(self, filename: str) -> list[str]:
         """
-        Read a file and generate verifiable claims from its content.
+        Reads a file and generates verifiable claims from its content.
+
+        This method is a convenience wrapper around `read_file` and `generate_text`.
 
         Args:
-            filename: Path to the file to process
+            filename (str): The path to the file.
 
         Returns:
-            List of verifiable claims
-
-        Raises:
-            FileNotFoundError: If the file doesn't exist
-            FileSizeLimitError: If file size exceeds the limit
-            ClaimsGenerationError: If file has encoding errors
-            APIError: If API calls fail
-            InvalidResponseError: If API response is invalid or no claims generated
+            list[str]: A list of unique, verifiable claims.
         """
         content = self.read_file(filename)
         return self.generate_text(content)
@@ -417,13 +437,13 @@ class ClaimsGenerator:
     @staticmethod
     def format_claims_as_numbered_list(claims: list[str]) -> str:
         """
-        Format a list of claims as a numbered list string.
+        Formats a list of claims into a numbered list string.
 
         Args:
-            claims: List of claims to format
+            claims (list[str]): A list of claims.
 
         Returns:
-            Formatted string with numbered claims
+            str: A single string with each claim on a new line, preceded by a number.
         """
         return '\n'.join(f"{num}. {claim}" for num, claim in enumerate(claims, 1))
 

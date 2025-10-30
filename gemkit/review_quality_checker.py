@@ -13,7 +13,7 @@ from typing import Optional, List, Dict, Any
 from enum import Enum
 from pydantic import BaseModel, Field
 
-from paper_reviewer import ComprehensivePaperReview, ReviewCategory
+from gemkit.paper_reviewer import ComprehensivePaperReview, ReviewCategory
 
 
 class QualityIssueType(str, Enum):
@@ -80,16 +80,15 @@ class ReviewQualityChecker:
     """
     Checks the quality of academic paper reviews.
 
-    Validates that reviews:
-    - Provide specific evidence from the paper
-    - Support claims with concrete examples
-    - Maintain internal consistency
-    - Have actionable suggestions
-    - Address all key aspects
+    This class provides methods to validate and score a review based on criteria
+    such as specificity, evidence support, consistency, and completeness. It can
+    identify common issues in reviews and provide recommendations for improvement.
     """
 
     def __init__(self):
-        """Initialize the quality checker"""
+        """
+        Initializes the ReviewQualityChecker.
+        """
         self.min_specificity_words = 10  # Minimum words per assessment
         self.min_evidence_references = 2  # Minimum references to paper sections
 
@@ -99,18 +98,15 @@ class ReviewQualityChecker:
         review_json_file: str
     ) -> ReviewQualityAssessment:
         """
-        Check the quality of a review.
+        Checks the quality of a review.
 
         Args:
-            pdf_file: Path to the PDF paper being reviewed
-            review_json_file: Path to the JSON review file
+            pdf_file (str): The path to the PDF file of the paper that was reviewed.
+            review_json_file (str): The path to the JSON file containing the review.
 
         Returns:
-            ReviewQualityAssessment with detailed quality analysis
-
-        Raises:
-            FileNotFoundError: If files don't exist
-            ValueError: If review JSON is invalid
+            ReviewQualityAssessment: A Pydantic model containing the detailed
+                                     quality analysis of the review.
         """
         # Validate files exist
         if not os.path.exists(pdf_file):

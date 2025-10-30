@@ -18,21 +18,29 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class VerifierConfig:
-    """Configuration for the Gemini Object Label Verifier."""
+    """
+    Configuration for the Gemini Object Label Verifier.
+
+    Attributes:
+        model_name (str): The name of the Gemini model to use for verification.
+    """
     model_name: str = "gemini-2.5-flash"
 
 
 class GeminiObjectLabelVerifier:
     """
-    Verifies object detection labels by querying sub-images with the Gemini API.
+    Verifies object detection labels by cropping each detected object from the
+    original image and querying the Gemini API to confirm the label's presence
+    in the sub-image.
     """
 
     def __init__(self, config: Optional[VerifierConfig] = None):
         """
-        Initialize the Gemini client and set up the model.
+        Initializes the GeminiObjectLabelVerifier.
 
         Args:
-            config: Optional configuration object. If None, default settings are used.
+            config (Optional[VerifierConfig], optional): A configuration object. If not provided,
+                                                          default settings are used.
         """
         self.config = config or VerifierConfig()
         self.client = self._create_client()
@@ -87,11 +95,15 @@ class GeminiObjectLabelVerifier:
 
     def verify_single_object(self, sub_image: Image.Image, label: str) -> Tuple[str, bool]:
         """
-        Queries the Gemini model to verify if the label exists in the sub-image.
+        Queries the Gemini model to verify if a label is present in a sub-image.
+
+        Args:
+            sub_image (Image.Image): The cropped image of the object.
+            label (str): The label to verify.
 
         Returns:
-            A tuple containing the model's text response and a boolean indicating
-            if the verification was successful.
+            Tuple[str, bool]: A tuple containing the model's text response and a
+                              boolean indicating whether the label was verified.
         """
         if not self.client:
             raise ConnectionError("Gemini client is not initialized.")
@@ -121,7 +133,20 @@ class GeminiObjectLabelVerifier:
         detection_json_path: str
     ) -> Optional[Dict[str, Any]]:
         """
-        Crops objects from an image based on detection data and verifies each label.
+        Verifies the labels of detected objects in an image.
+
+        This method loads an image and its corresponding object detection data,
+        then iterates through each detected object, crops it from the main image,
+        and sends the sub-image to the Gemini API for label verification.
+
+        Args:
+            image_path (str): The path to the original image file.
+            detection_json_path (str): The path to the JSON file containing the
+                                       object detection results.
+
+        Returns:
+            Optional[Dict[str, Any]]: A dictionary containing the verification
+                                      results, or None if an error occurs.
         """
         original_image = self._load_image(image_path)
         if not original_image:

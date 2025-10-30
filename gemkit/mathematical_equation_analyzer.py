@@ -468,14 +468,21 @@ EMPHASIZE:
 
 def analyze_equation(equation_name: str, audience: AudienceType = "graduate") -> EquationAnalysis:
     """
-    Get LaTeX formula and analysis of a mathematical equation by name, tailored to audience.
+    Analyzes a mathematical equation and returns a structured analysis tailored
+    to a specific audience.
+
+    This function sends a detailed prompt to the Gemini API, requesting an
+    in-depth analysis of the specified equation. The level of detail and
+    complexity of the analysis is adjusted based on the target audience.
 
     Args:
-        equation_name (str): The name of the equation (e.g., "Poisson Equation")
-        audience (AudienceType): Target audience - "high_school", "graduate", "professional", or "researcher"
+        equation_name (str): The name of the equation to be analyzed (e.g., "Poisson Equation").
+        audience (AudienceType, optional): The target audience for the analysis.
+                                            Can be "high_school", "graduate", "professional",
+                                            or "researcher". Defaults to "graduate".
 
     Returns:
-        EquationAnalysis: Structured analysis with LaTeX formula tailored to audience
+        EquationAnalysis: A Pydantic model containing the structured analysis of the equation.
     """
 
     # Initialize the Gemini client

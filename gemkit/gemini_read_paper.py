@@ -191,7 +191,13 @@ class PaperAnalysis(BaseModel):
 # ====================================================================
 
 class ResearchPaperAnalyzer:
-    """Analyzer for research papers using Gemini API"""
+    """
+    Analyzes research papers from PDF files using the Gemini API.
+
+    This class provides a high-level interface for uploading a PDF, generating a
+    comprehensive analysis of its content, and saving the structured results
+    to a JSON file.
+    """
 
     def __init__(
         self,
@@ -199,15 +205,14 @@ class ResearchPaperAnalyzer:
         model_name: str = 'gemini-2.0-flash',
         max_retries: int = 3
     ):
-        """Initialize with Gemini API key using the standard genai namespace.
+        """
+        Initializes the ResearchPaperAnalyzer.
 
         Args:
-            api_key: Gemini API key (if None, reads from GEMINI_API_KEY env var)
-            model_name: Model to use (default: gemini-2.0-flash-exp)
-            max_retries: Maximum number of retry attempts (default: 3)
-
-        Raises:
-            ValueError: If API key is not provided and not found in environment
+            api_key (Optional[str], optional): The Gemini API key. If not provided, it will be
+                                               read from the GEMINI_API_KEY environment variable.
+            model_name (str, optional): The name of the Gemini model to use.
+            max_retries (int, optional): The maximum number of times to retry a failed API call.
         """
         # Get API key from parameter or environment
         if api_key is None:
@@ -226,18 +231,14 @@ class ResearchPaperAnalyzer:
         logger.info(f"Initialized ResearchPaperAnalyzer with model: {model_name} using standard client via genai.")
 
     def upload_pdf(self, pdf_path: str) -> Any:
-        """Upload PDF to Gemini with error handling
+        """
+        Uploads a PDF file to the Gemini service.
 
         Args:
-            pdf_path: Path to PDF file
+            pdf_path (str): The path to the PDF file.
 
         Returns:
-            Uploaded file object
-
-        Raises:
-            FileNotFoundError: If PDF doesn't exist
-            ValueError: If file is not a PDF
-            Exception: For upload failures
+            Any: The uploaded file object from the Gemini API.
         """
         path = self._validate_pdf_path(pdf_path)
         file_size_mb = path.stat().st_size / (1024 * 1024)
@@ -254,7 +255,12 @@ class ResearchPaperAnalyzer:
             raise
 
     def cleanup_uploaded_files(self):
-        """Delete uploaded files from Gemini storage using the modern client."""
+        """
+        Deletes all uploaded files from the Gemini service.
+
+        It is important to call this method when you are finished with the
+        analyzer to avoid unnecessary storage costs.
+        """
         for file in self.uploaded_files:
             try:
                 # Using client method (self.client.files.delete)
@@ -342,16 +348,17 @@ class ResearchPaperAnalyzer:
         return json.loads(response.text)
 
     def analyze_paper(self, pdf_path: str) -> PaperAnalysis:
-        """Analyze research paper comprehensively using structured JSON output
+        """
+        Analyzes a research paper from a PDF file.
+
+        This method uploads the PDF, sends a detailed prompt to the Gemini API,
+        and returns a structured analysis of the paper's content.
 
         Args:
-            pdf_path: Path to PDF file
+            pdf_path (str): The path to the PDF file.
 
         Returns:
-            PaperAnalysis object
-
-        Raises:
-            Exception: For analysis failures
+            PaperAnalysis: A Pydantic model containing the detailed analysis.
         """
         try:
             # Upload PDF
@@ -431,12 +438,11 @@ Be thorough, critical, and constructive in your analysis.
             raise
 
     def save(self, output_path: str):
-        """Save structured analysis data to a JSON file using the json library.
-        
-        It retrieves the PaperAnalysis object from the instance attribute self.analysis.
+        """
+        Saves the analysis results to a JSON file.
 
         Args:
-            output_path: Path to save JSON file
+            output_path (str): The path to the output JSON file.
         """
         if self.analysis is None:
             logger.error("No analysis data available to save.")

@@ -29,8 +29,18 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ModelConfig:
     """
-    Configuration dataclass for GeminiClient initialization.
-    Defines generation parameters.
+    Configuration for GeminiClient, specifying model and generation parameters.
+
+    Attributes:
+        model_name (str): The name of the Gemini model to use.
+        max_retries (int): Maximum number of retries for API calls.
+        initial_delay (float): Initial delay in seconds for exponential backoff.
+        temperature (Optional[float]): Sampling temperature for generation.
+        top_p (Optional[float]): Nucleus sampling probability.
+        top_k (Optional[int]): Top-k sampling parameter.
+        max_output_tokens (Optional[int]): Maximum number of tokens to generate.
+        thinking_budget (Optional[int]): Budget for model thinking time.
+        timeout (float): Timeout for API requests in seconds.
     """
     model_name: str = 'gemini-2.5-flash'
     max_retries: int = 3
@@ -45,14 +55,14 @@ class ModelConfig:
 @dataclass
 class ModelInput:
     """
-    Dataclass to structure user input parameters.
+    Structures the input for a Gemini model request.
 
     Attributes:
-        user_prompt (str): The user's question or prompt (required).
-        sys_prompt (str): Optional system prompt to set behavior or context.
-        assist_prompt (str): Optional assistant message for few-shot examples or context.
-        response_schema (Optional[Any]): Pydantic model class or raw JSON schema dict for structured output.
-        images (Optional[List[Union[str, Path]]]): List of file paths pointing to images (JPG, PNG, etc.).
+        user_prompt (str): The primary text prompt from the user.
+        sys_prompt (str): Optional system-level instructions to guide the model's behavior.
+        assist_prompt (str): Optional assistant message for providing few-shot examples or context.
+        response_schema (Optional[Any]): A Pydantic model or a JSON schema dictionary for structured output.
+        images (Optional[List[Union[str, Path]]]): A list of local file paths to images for multimodal input.
     """
     user_prompt: str
     sys_prompt: str = ""
@@ -62,12 +72,29 @@ class ModelInput:
 
 class GeminiClient:
     """
-    A core client to interact with the Gemini API, featuring retries on network and throttling errors.
+    A client for interacting with the Google Gemini API, with built-in support for retries,
+    structured output, and multimodal inputs.
+
+    This client handles API authentication, request configuration, and response parsing.
+    It is designed to be resilient to transient network issues and API errors through
+    exponential backoff retries.
     """
     MODELS_NAME = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite']
 
     def __init__(self, config: ModelConfig = None, api_key: Optional[str] = None):
-        """Initialize GeminiClient with configuration and API key."""
+        """
+        Initializes the GeminiClient.
+
+        Args:
+            config (ModelConfig, optional): A configuration object for the client. 
+                                            If None, default settings are used.
+            api_key (str, optional): The API key for authentication. If not provided,
+                                     it's read from the GEMINI_API_KEY environment variable.
+
+        Raises:
+            ValueError: If the model name in the config is invalid or if the API key is missing.
+            RuntimeError: If the Gemini client fails to initialize.
+        """
         if config is None:
             config = ModelConfig()
 
@@ -281,10 +308,27 @@ class GeminiClient:
     )
     def generate_content(self, model_input: ModelInput, stream: bool = False) -> Union[str, dict, list, Any, Iterable[str]]:
         """
-        Unified method for text, structured JSON, and streaming generation.
+        Generates content from the Gemini model, supporting text, structured JSON, and streaming.
 
-        Dispatches to _generate_json if a response_schema is present.
-        Otherwise, performs text/streaming generation.
+        This method acts as a dispatcher. If a `response_schema` is provided in `model_input`,
+        it routes the request to the `_generate_json` method for structured output. Otherwise,
+        it handles text generation, either as a single response or a stream of chunks.
+
+        Args:
+            model_input (ModelInput): The input data for the model, including prompts and images.
+            stream (bool, optional): If True, returns a streaming iterator for the response. 
+                                     Defaults to False. Streaming is not supported for JSON output.
+
+        Returns:
+            - If `stream` is False and no `response_schema` is given: A string containing the generated text.
+            - If `stream` is True and no `response_schema` is given: An iterable of strings, yielding chunks of the response.
+            - If a `response_schema` is given: A Pydantic model instance matching the schema.
+
+        Raises:
+            ValueError: If JSON generation fails after multiple self-correction retries.
+            genai.errors.APIError: If a non-retriable API error occurs.
+            ConnectionError: If a network error occurs after all retries.
+            TimeoutError: If the request times out after all retries.
         """
         for_structured = model_input.response_schema is not None
         

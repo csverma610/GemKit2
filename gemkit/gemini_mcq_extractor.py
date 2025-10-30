@@ -22,15 +22,22 @@ logging.basicConfig(
 
 
 class GeminiPDFBase:
-    """Base class for Gemini PDF operations with shared functionality."""
+    """
+    A base class for handling PDF operations with the Gemini API.
+
+    This class provides common functionality for uploading, validating, and deleting
+    PDF files, as well as for generating text from a loaded PDF. It is designed
+    to be subclassed by more specific PDF processing classes.
+    """
     DEFAULT_MODEL = "gemini-2.5-flash"
 
     def __init__(self, model_name: str = DEFAULT_MODEL):
         """
-        Initialize the Gemini PDF base.
+        Initializes the GeminiPDFBase instance.
 
         Args:
-            model_name: Gemini model to use (default: gemini-2.5-flash)
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to "gemini-2.5-flash".
         """
         self.model_name = model_name
         self.uploaded_file = None
@@ -78,14 +85,13 @@ class GeminiPDFBase:
 
     def load_pdf(self, pdf_file: str):
         """
-        Load and upload a PDF file to Gemini.
+        Uploads a PDF file to the Gemini service.
+
+        If a file is already uploaded, it will be deleted before the new file
+        is uploaded.
 
         Args:
-            pdf_file: Path to the PDF file to upload
-
-        Raises:
-            FileNotFoundError: If file doesn't exist
-            ValueError: If file is not a PDF
+            pdf_file (str): The path to the PDF file.
         """
         if self.uploaded_file:
             self._delete_pdf()
@@ -112,15 +118,16 @@ class GeminiPDFBase:
 
     def generate_text(self, prompt: str, response_schema: Optional[Type[BaseModel]] = None) -> str | BaseModel:
         """
-        Send a message and get a response.
+        Generates a response from the Gemini model for the loaded PDF.
 
         Args:
-            prompt: User's message/question
-            response_schema: Optional Pydantic BaseModel class for structured output
+            prompt (str): The prompt to send to the model.
+            response_schema (Optional[Type[BaseModel]], optional): A Pydantic model to use for
+                                                                    structured output.
 
         Returns:
-            If response_schema provided: Pydantic model instance
-            If no schema: Plain text string response
+            str | BaseModel: If a `response_schema` is provided, a Pydantic model instance
+                             is returned. Otherwise, a plain text string is returned.
         """
         if not self.uploaded_file:
             raise ValueError("No PDF loaded. Use load_pdf() first.")
@@ -155,13 +162,17 @@ class GeminiPDFBase:
 
 
 class MCQOption(BaseModel):
-    """Model for a single MCQ option."""
+    """
+    A Pydantic model representing a single option in a multiple-choice question.
+    """
     option_id: str = Field(..., description="Option identifier (A, B, C, D, etc.)")
     text: str = Field(..., description="Option text content")
 
 
 class MultipleChoiceQuestion(BaseModel):
-    """Model for a single Multiple-Choice Question with validation."""
+    """
+    A Pydantic model representing a single multiple-choice question.
+    """
     id: str = Field(..., description="Unique question identifier")
     question_text: str = Field(..., description="The question content")
     options: List[MCQOption] = Field(..., description="List of options")
@@ -189,7 +200,9 @@ class MultipleChoiceQuestion(BaseModel):
 
 
 class MCQExtractionResult(BaseModel):
-    """Model for the complete extraction result."""
+    """
+    A Pydantic model representing the result of an MCQ extraction process.
+    """
     pdf_filename: str = Field(..., description="Name of the source PDF")
     extraction_timestamp: str = Field(..., description="When extraction was performed")
     total_questions: int = Field(..., description="Total number of questions extracted")
@@ -197,15 +210,20 @@ class MCQExtractionResult(BaseModel):
 
 
 class GeminiMCQExtractor(GeminiPDFBase):
-    """MCQ extractor that inherits shared PDF operations from GeminiPDFBase."""
+    """
+    Extracts multiple-choice questions from a PDF file using the Gemini API.
+
+    This class inherits from `GeminiPDFBase` and provides methods for extracting
+    MCQs, saving the results, and extracting associated images.
+    """
 
     def __init__(self, model_name: str = GeminiPDFBase.DEFAULT_MODEL, output_dir: str = "mcq_output"):
         """
-        Initialize the MCQ extractor.
+        Initializes the GeminiMCQExtractor.
 
         Args:
-            model_name: Gemini model to use (default: gemini-2.5-flash)
-            output_dir: Directory to save extracted MCQs and images
+            model_name (str, optional): The name of the Gemini model to use.
+            output_dir (str, optional): The directory to save the extracted MCQs and images.
         """
         super().__init__(model_name)
         self.output_dir = pathlib.Path(output_dir)
@@ -220,14 +238,10 @@ class GeminiMCQExtractor(GeminiPDFBase):
 
     def extract_mcqs(self) -> MCQExtractionResult:
         """
-        Extract all MCQs from the loaded PDF using Gemini.
+        Extracts all multiple-choice questions from the loaded PDF.
 
         Returns:
-            MCQExtractionResult: Structured data of extracted MCQs
-
-        Raises:
-            ValueError: If no PDF is loaded
-            json.JSONDecodeError: If response cannot be parsed
+            MCQExtractionResult: A Pydantic model containing the extracted MCQs.
         """
         if not self.uploaded_file:
             raise ValueError("No PDF loaded. Use load_pdf() first.")
@@ -307,14 +321,15 @@ Return ONLY valid JSON array without any markdown formatting or explanation.
 
     def save_results(self, result: MCQExtractionResult, filename: Optional[str] = None) -> pathlib.Path:
         """
-        Save extracted MCQs to JSON file.
+        Saves the extracted MCQs to a JSON file.
 
         Args:
-            result: MCQExtractionResult object to save
-            filename: Custom filename (default: mcq_extraction_<timestamp>.json)
+            result (MCQExtractionResult): The MCQ extraction result to save.
+            filename (Optional[str], optional): The name of the output file. If not provided,
+                                                a filename will be generated automatically.
 
         Returns:
-            Path to the saved JSON file
+            pathlib.Path: The path to the saved JSON file.
         """
         if filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -330,10 +345,13 @@ Return ONLY valid JSON array without any markdown formatting or explanation.
 
     def extract_images(self) -> dict:
         """
-        Extract and save images from the PDF using Gemini.
+        Extracts metadata about images from the PDF.
+
+        Note: This method currently only extracts metadata about the images,
+        not the images themselves.
 
         Returns:
-            Dictionary mapping question IDs to their image paths
+            dict: A dictionary mapping image IDs to their metadata.
         """
         if not self.uploaded_file:
             raise ValueError("No PDF loaded. Use load_pdf() first.")

@@ -8,12 +8,20 @@ from typing import Dict, Any
 
 
 class DiagramAnalyzer:
+    """
+    Analyzes geometric diagrams from images and generates a JSON specification
+    that can be used to recreate them.
+
+    This class uses the Gemini API to interpret the contents of an image and
+    produces a structured JSON output that describes the shapes, lines, and
+    other elements in the diagram.
+    """
     def __init__(self, api_key: str):
         """
-        Initialize the diagram analyzer with proper client instantiation.
-        
+        Initializes the DiagramAnalyzer.
+
         Args:
-            api_key: Google Gemini API key
+            api_key (str): The Google Gemini API key.
         """
         # Step 1: Create the client (NO genai.configure needed!)
         self.client = genai.Client(api_key=api_key)
@@ -56,13 +64,16 @@ class DiagramAnalyzer:
         
     def analyze_diagram(self, image_path: str) -> Dict[str, Any]:
         """
-        Analyze the geometric diagram using the initialized client.
-        
+        Analyzes a geometric diagram from an image file.
+
+        This method sends the image to the Gemini API with a detailed prompt
+        requesting a JSON specification of the diagram's contents.
+
         Args:
-            image_path: Path to the input image
-            
+            image_path (str): The path to the input image file.
+
         Returns:
-            Dictionary containing diagram specifications
+            Dict[str, Any]: A dictionary representing the diagram specification.
         """
         print(f"\nLoading image: {image_path}")
         
@@ -217,11 +228,11 @@ class DiagramAnalyzer:
     
     def save_specification(self, spec: Dict[str, Any], output_path: str):
         """
-        Save the diagram specification to a JSON file.
-        
+        Saves the diagram specification to a JSON file.
+
         Args:
-            spec: Diagram specification dictionary
-            output_path: Path to save the JSON file
+            spec (Dict[str, Any]): The diagram specification dictionary.
+            output_path (str): The path to save the JSON file.
         """
         with open(output_path, 'w') as f:
             json.dump(spec, f, indent=2)
@@ -248,11 +259,12 @@ class DiagramAnalyzer:
     
     def analyze_and_save(self, image_path: str, output_json: str):
         """
-        Complete pipeline: analyze image and save JSON specification.
-        
+        A convenience method that analyzes an image and saves the resulting
+        diagram specification to a JSON file.
+
         Args:
-            image_path: Path to input image
-            output_json: Path to save JSON specification
+            image_path (str): The path to the input image file.
+            output_json (str): The path to save the output JSON file.
         """
         spec = self.analyze_diagram(image_path)
         self.save_specification(spec, output_json)

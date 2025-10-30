@@ -18,21 +18,21 @@ logger = logging.getLogger(__name__)
 
 class GeminiImageEditor:
     """
-    A user-friendly image editor using Google's Gemini AI.
-    
-    Simple workflow:
-    1. editor = GeminiImageEditor()
-    2. editor.set_image("your_image.jpg")  
-    3. editor.edit("your instruction")
+    An interactive image editor that uses the Google Gemini API to modify
+    images based on natural language instructions.
+
+    This class maintains a chat-like session with the Gemini model, allowing
+    for a series of edits to be applied to an image.
     """
     
     def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.5-flash-image-preview"):
         """
-        Initialize the Gemini Image Editor.
-        
+        Initializes the GeminiImageEditor.
+
         Args:
-            api_key: Google AI API key. If None, looks for GOOGLE_AI_API_KEY environment variable.
-            model: The Gemini model to use.
+            api_key (Optional[str], optional): The Google AI API key. If not provided, it will be
+                                               read from the GOOGLE_AI_API_KEY environment variable.
+            model (str, optional): The name of the Gemini model to use.
         """
         # Try to get API key
         self.api_key = api_key or os.getenv('GOOGLE_AI_API_KEY')
@@ -55,13 +55,16 @@ class GeminiImageEditor:
     
     def set_image(self, image_path: Union[str, Path]) -> bool:
         """
-        Set a new base image for editing. This starts fresh.
-        
+        Sets a new base image for the editing session.
+
+        This method starts a new chat session with the Gemini model and sends
+        the specified image to establish the context for subsequent edits.
+
         Args:
-            image_path: Path to your image file
-            
+            image_path (Union[str, Path]): The path to the image file.
+
         Returns:
-            True if successful, False otherwise
+            bool: `True` if the image was set successfully, `False` otherwise.
         """
         try:
             image_path = Path(image_path)
@@ -114,14 +117,15 @@ class GeminiImageEditor:
     
     def edit(self, instruction: str, save_to: str = "output") -> List[str]:
         """
-        Edit the image with a simple instruction.
-        
+        Applies an edit to the current image based on a natural language instruction.
+
         Args:
-            instruction: What you want to do (e.g., "make it brighter", "add a hat")
-            save_to: Directory to save results (default: "output")
-            
+            instruction (str): A description of the desired edit (e.g., "make the sky blue").
+            save_to (str, optional): The directory to save the resulting image(s).
+                                     Defaults to "output".
+
         Returns:
-            List of saved file paths
+            List[str]: A list of file paths to the saved images.
         """
         if not self._check_ready():
             return []

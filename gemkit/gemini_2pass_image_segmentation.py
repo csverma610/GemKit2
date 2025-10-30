@@ -18,14 +18,22 @@ from google.genai import types
 from gemini_image_segmentation import GeminiImageSegmentation
 
 class GeminiTwoPassImageSegmentation:
-    """Two-pass segmentation: coarse detection followed by refined per-object segmentation."""
+    """
+    Performs a two-pass image segmentation using the Gemini API.
+
+    The first pass performs a coarse detection of all prominent objects in the image.
+    The second pass refines the segmentation for each detected object individually
+    by cropping the object from the original image and sending it back to the model
+    for a more detailed segmentation.
+    """
     
     def __init__(self, model_name: str = 'gemini-2.5-flash') -> None:
         """
-        Initialize using the single-pass segmentation engine.
-        
+        Initializes the GeminiTwoPassImageSegmentation instance.
+
         Args:
-            model_name: Gemini model to use for segmentation.
+            model_name (str, optional): The name of the Gemini model to use for segmentation.
+                                        Defaults to 'gemini-2.5-flash'.
         """
         # Use single-pass algorithm as the core engine
         self.segmenter = GeminiImageSegmentation(model_name=model_name)
@@ -330,23 +338,28 @@ class GeminiTwoPassImageSegmentation:
         padding: int = 20
     ) -> Dict[str, Any]:
         """
-        Perform two-pass segmentation using single-pass algorithm for both passes.
-        
+        Performs a two-pass image segmentation.
+
+        The first pass identifies prominent objects in the image. The second pass
+        refines the segmentation for each of these objects.
+
         Args:
-            image_path: Path to image file.
-            objects_to_segment: Optional list of specific objects to detect.
-            output_dir: Output directory for results.
-            enable_refinement: If True, performs second pass refinement.
-            padding: Pixels to add around crops in second pass.
-            
+            image_path (str): The path to the image file.
+            objects_to_segment (Optional[List[str]], optional): A list of specific objects
+                                                               to segment. If None, the model
+                                                               will identify prominent objects.
+                                                               Defaults to None.
+            output_dir (str, optional): The directory to save the output files.
+                                        Defaults to "segmentation_outputs".
+            enable_refinement (bool, optional): Whether to perform the second pass of
+                                                refinement. Defaults to True.
+            padding (int, optional): The number of pixels to add as padding around the
+                                     cropped images in the second pass. Defaults to 20.
+
         Returns:
-            Dictionary containing:
-                - pass1_detections: Number of objects detected in first pass
-                - pass2_refined: Number of objects refined in second pass
-                - output_directory: Path to output directory
-                - pass1_result: Full result from first pass
-                - pass2_result: Full result from second pass (if enabled)
-                - error: Error message if operation failed
+            Dict[str, Any]: A dictionary containing the results of the segmentation,
+                            including the number of detections and refined objects,
+                            the output directory, and the detailed results from each pass.
         """
         if not os.path.exists(image_path):
             return {"error": f"Image not found: {image_path}"}

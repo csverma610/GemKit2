@@ -8,27 +8,36 @@ from google.genai import types
 
 class GeminiImageGenerator:
     """
-    A class to handle image-to-image generation and editing using the
-    Gemini 2.5 Flash Image Preview model.
+    Generates images from text prompts using the Google Gemini API.
+
+    This class provides a high-level interface for sending a text prompt to the
+    Gemini API and saving the generated image to a file.
     """
     DEFAULT_MODEL = "gemini-2.5-flash-image"
 
     def __init__(self, model_name=DEFAULT_MODEL):
         """
-        Initializes the Gemini client.
-        The API key is read exclusively from the GEMINI_API_KEY environment variable.
+        Initializes the GeminiImageGenerator.
+
+        Args:
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to "gemini-2.5-flash-image".
         """
         self.model_name = model_name
         self._create_client()
 
     def generate_image(self, prompt: str, output_filename: str = "new_image.png") -> dict:
         """
+        Generates an image based on a text prompt.
+
         Args:
-            prompt: The text instruction for the image generation.
-            output_filename: The path to save the resulting image.
+            prompt (str): The text prompt describing the image to generate.
+            output_filename (str, optional): The path to save the generated image.
+                                             Defaults to "new_image.png".
 
         Returns:
-            A dictionary containing the response text and the output file path.
+            dict: A dictionary containing the response text from the model and the
+                  filepath where the generated image was saved.
         """
         if not self.client:
             return {"text": "Client not initialized due to previous error.", "filepath": None}

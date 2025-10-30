@@ -9,7 +9,9 @@ from enum import Enum
 
 
 class TaskStatus(Enum):
-    """Enum for task status"""
+    """
+    An enumeration for the possible statuses of a task.
+    """
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -18,7 +20,9 @@ class TaskStatus(Enum):
 
 
 class TaskPriority(Enum):
-    """Enum for task priority"""
+    """
+    An enumeration for the possible priorities of a task.
+    """
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -27,7 +31,12 @@ class TaskPriority(Enum):
 
 @dataclass
 class Task:
-    """Data class to represent a task"""
+    """
+    A dataclass representing a task.
+
+    This class provides a structured way to manage tasks, including their status,
+    priority, and other metadata.
+    """
     id: str
     title: str
     description: str
@@ -43,29 +52,39 @@ class Task:
     error: Optional[str] = None
 
     def mark_in_progress(self):
-        """Mark task as in progress"""
+        """Marks the task as in progress."""
         self.status = TaskStatus.IN_PROGRESS
         self.updated_at = datetime.now()
 
     def mark_completed(self):
-        """Mark task as completed"""
+        """Marks the task as completed."""
         self.status = TaskStatus.COMPLETED
         self.completed_at = datetime.now()
         self.updated_at = datetime.now()
 
     def mark_failed(self, error: str):
-        """Mark task as failed with error message"""
+        """
+        Marks the task as failed and records an error message.
+
+        Args:
+            error (str): The error message to record.
+        """
         self.status = TaskStatus.FAILED
         self.error = error
         self.updated_at = datetime.now()
 
     def mark_cancelled(self):
-        """Mark task as cancelled"""
+        """Marks the task as cancelled."""
         self.status = TaskStatus.CANCELLED
         self.updated_at = datetime.now()
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert task to dictionary"""
+        """
+        Converts the task to a dictionary.
+
+        Returns:
+            Dict[str, Any]: A dictionary representation of the task.
+        """
         return {
             'id': self.id,
             'title': self.title,
@@ -84,7 +103,15 @@ class Task:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Task':
-        """Create task from dictionary"""
+        """
+        Creates a `Task` object from a dictionary.
+
+        Args:
+            data (Dict[str, Any]): A dictionary containing the task data.
+
+        Returns:
+            Task: A new `Task` object.
+        """
         return cls(
             id=data['id'],
             title=data['title'],

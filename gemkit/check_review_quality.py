@@ -16,7 +16,20 @@ from review_quality_checker import ReviewQualityChecker
 
 
 def main():
-    """Main entry point"""
+    """
+    Checks the quality of an academic paper review.
+
+    This script takes a PDF of a paper and a JSON file containing a review of that paper.
+    It then uses the ReviewQualityChecker to assess the quality of the review based on
+    criteria such as specificity, evidence support, consistency, and completeness.
+
+    The assessment, including scores, a summary, and any identified issues, is printed
+    to the console. The full assessment is also saved to a new JSON file.
+
+    Command-line arguments:
+        pdf_file (str): The path to the PDF file of the paper.
+        review_json_file (str): The path to the JSON file containing the review.
+    """
     if len(sys.argv) < 3:
         print("Usage: python check_review_quality.py <pdf_file> <review_json_file>")
         print("\nExample:")

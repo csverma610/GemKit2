@@ -6,15 +6,15 @@ from gemini_client import GeminiClient
 
 class PromptImprover:
     """
-    A class to improve prompts using Google's Generative AI API.
-    
-    This class provides methods to enhance prompt quality with customizable
-    improvement strategies and robust error handling.
+    Improves the quality of prompts using the Google Gemini API.
+
+    This class provides methods to enhance a given prompt based on different
+    improvement strategies, such as improving clarity, specificity, or creativity.
     """
     
     def __init__(self):
         """
-        Initialize the PromptImprover.
+        Initializes the PromptImprover.
         """
         self.client = GeminiClient()
     
@@ -26,21 +26,20 @@ class PromptImprover:
         additional_context: Optional[str] = None
     ) -> str:
         """
-        Improve the quality of a given prompt.
-        
+        Improves the quality of a given prompt.
+
         Args:
-            original_prompt (str): The original prompt to improve
-            improvement_strategy (str): Strategy for improvement 
-                ('general', 'clarity', 'specificity', 'creativity')
-            return_function (bool): Whether to return a Python function format
-            additional_context (Optional[str]): Additional context for improvement
-            
+            original_prompt (str): The original prompt to be improved.
+            improvement_strategy (str, optional): The strategy to use for improvement.
+                                                 Can be 'general', 'clarity', 'specificity',
+                                                 or 'creativity'. Defaults to "general".
+            return_function (bool, optional): Whether to return the improved prompt
+                                              wrapped in a Python function. Defaults to True.
+            additional_context (Optional[str], optional): Additional context to consider
+                                                          during the improvement process.
+
         Returns:
-            str: The improved prompt or function
-            
-        Raises:
-            ValueError: If the original prompt is empty
-            Exception: If API call fails
+            str: The improved prompt.
         """
         if not original_prompt or not original_prompt.strip():
             raise ValueError("Original prompt cannot be empty")

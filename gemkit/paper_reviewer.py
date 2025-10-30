@@ -4,7 +4,7 @@ import os
 
 from pydantic import BaseModel, Field, field_validator
 
-from pydantic_prompt_generator import PydanticPromptGenerator, PromptStyle
+from gemkit.pydantic_prompt_generator import PydanticPromptGenerator, PromptStyle
 
 class ReviewCategory(str, Enum):
     """Categories for paper review aspects"""
@@ -467,16 +467,21 @@ Your task is to provide a comprehensive, constructive, and rigorous review of th
 
 class PaperReviewer:
     """
-    High-level interface for reviewing academic papers using Gemini API.
+    A class for generating comprehensive, structured reviews of academic papers
+    using the Gemini API.
+
+    This class uses a detailed Pydantic model, `ComprehensivePaperReview`, to
+    ensure that the generated review is well-structured and covers all the
+    key aspects of a high-quality academic review.
     """
 
     def __init__(self, model_name: str = "gemini-2.5-flash", prompt_style: PromptStyle = PromptStyle.DETAILED):
         """
-        Initialize the PaperReviewer.
+        Initializes the PaperReviewer.
 
         Args:
-            model_name: Gemini model to use (default: gemini-2.5-flash)
-            prompt_style: Style for prompt generation - DETAILED, CONCISE, or TECHNICAL (default: DETAILED)
+            model_name (str, optional): The name of the Gemini model to use.
+            prompt_style (PromptStyle, optional): The style of the prompt to generate.
         """
         self.model_name = model_name
         self.prompt_style = prompt_style
@@ -498,18 +503,17 @@ class PaperReviewer:
 
     def review(self, pdf_file: str) -> ComprehensivePaperReview:
         """
-        Review a PDF paper.
+        Reviews a PDF paper and returns a structured review.
+
+        This method uploads the PDF, sends a detailed prompt to the Gemini API,
+        and returns a `ComprehensivePaperReview` object with the structured
+        review.
 
         Args:
-            pdf_file: Path to the PDF paper file
+            pdf_file (str): The path to the PDF file of the paper to be reviewed.
 
         Returns:
-            ComprehensivePaperReview object with structured review
-
-        Raises:
-            FileNotFoundError: If PDF file doesn't exist
-            ValueError: If file is not a PDF
-            RuntimeError: If review generation fails
+            ComprehensivePaperReview: A Pydantic model containing the structured review.
         """
         # Validate file exists
         if not os.path.exists(pdf_file):
@@ -520,7 +524,7 @@ class PaperReviewer:
             raise ValueError(f"File must be a PDF file (got {pdf_file})")
 
         # Import here to avoid circular imports
-        from gemini_pdf_chat import GeminiPDFChat
+        from gemkit.gemini_pdf_chat import GeminiPDFChat
 
         try:
             with GeminiPDFChat(model_name=self.model_name) as chat:

@@ -9,7 +9,7 @@ import argparse
 import logging
 import os
 
-from paper_reviewer import ComprehensivePaperReview, PaperReviewer
+from gemkit.paper_reviewer import ComprehensivePaperReview, PaperReviewer
 
 
 # Configure logging
@@ -26,14 +26,21 @@ logging.basicConfig(
 
 def review_pdf_paper(pdf_file: str, model_name: str = "gemini-2.5-flash") -> ComprehensivePaperReview:
     """
-    Review a PDF paper with structured output.
+    Reviews a PDF paper and returns a structured review.
+
+    This function initializes a `PaperReviewer` with the specified model, and then
+    calls the `review` method to generate a `ComprehensivePaperReview`.
 
     Args:
-        pdf_file: Path to the PDF paper to review
-        model_name: Gemini model to use
+        pdf_file (str): The path to the PDF file of the paper to be reviewed.
+        model_name (str, optional): The name of the Gemini model to use for the review.
+                                    Defaults to "gemini-2.5-flash".
 
     Returns:
-        ComprehensivePaperReview object with structured review
+        ComprehensivePaperReview: A Pydantic model containing the structured review.
+
+    Raises:
+        FileNotFoundError: If the specified `pdf_file` does not exist.
     """
     if not os.path.exists(pdf_file):
         raise FileNotFoundError(f"PDF file not found: {pdf_file}")
@@ -43,7 +50,13 @@ def review_pdf_paper(pdf_file: str, model_name: str = "gemini-2.5-flash") -> Com
 
 
 def main():
-    """Main function to handle command line execution."""
+    """
+    The main entry point for the command-line paper reviewer.
+
+    This function parses command-line arguments, calls the `review_pdf_paper` function
+    to generate a review, and then prints the review to the console. If an output
+    file is specified, the review is also saved as a JSON file.
+    """
     parser = argparse.ArgumentParser(
         description='PDF Paper Reviewer - Generate structured academic paper reviews with Gemini API',
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationStatus(str, Enum):
-    """Enumeration of possible verification statuses."""
+    """
+    Enumeration of possible verification statuses for a claim.
+    """
     TRUE = "True"
     FALSE = "False"
     PARTIALLY_TRUE = "Partially True"
@@ -31,7 +33,16 @@ class VerificationStatus(str, Enum):
 
 
 class ClaimVerificationResult(BaseModel):
-    """Structured result of claim verification."""
+    """
+    A Pydantic model representing the structured result of a claim verification.
+
+    Attributes:
+        summary (str): A brief overview of the claim being verified.
+        verification_status (VerificationStatus): The verification status of the claim.
+        evidence (str): Supporting evidence or reasoning for the verification status.
+        sources (str): Relevant sources or context that support the evidence.
+        truthfulness_score (float): A score between 0.0 (certainly false) and 1.0 (certainly true).
+    """
     summary: str = Field(description="A brief overview of the claim", min_length=1, max_length=1000)
     verification_status: VerificationStatus = Field(description="The verification status of the claim")
     evidence: str = Field(description="Supporting evidence or reasoning for the verification", min_length=1)
@@ -52,7 +63,13 @@ class ClaimVerificationResult(BaseModel):
 
 
 class ClaimVerifier:
-    """A class to verify claims using Google's Gemini AI with production-grade features."""
+    """
+    Verifies claims using the Google Gemini API, with features like retry logic,
+    input validation, and structured output.
+
+    This class can be used to verify a single claim or a batch of claims, with an
+    option to enable Google Search grounding for more accurate fact-checking.
+    """
 
     # Constants
     MAX_CLAIM_LENGTH = 10000
@@ -66,15 +83,16 @@ class ClaimVerifier:
         timeout: int = REQUEST_TIMEOUT
     ):
         """
-        Initialize the ClaimVerifier.
+        Initializes the ClaimVerifier.
 
         Args:
-            model: The Gemini model to use for verification
-            api_key: Optional API key (will use GOOGLE_API_KEY env var if not provided)
-            timeout: Request timeout in seconds
+            model (str, optional): The name of the Gemini model to use.
+            api_key (Optional[str], optional): The Google API key. If not provided, it will be
+                                               read from the GOOGLE_API_KEY environment variable.
+            timeout (int, optional): The timeout for API requests in seconds.
 
         Raises:
-            ValueError: If API key is not provided and GOOGLE_API_KEY env var is not set
+            ValueError: If the API key is not provided and cannot be found in the environment.
         """
         self.model = model
         self.timeout = timeout
@@ -101,16 +119,16 @@ class ClaimVerifier:
     @staticmethod
     def validate_claim(claim: str) -> str:
         """
-        Validate and sanitize a claim.
+        Validates and sanitizes a claim.
 
         Args:
-            claim: The claim to validate
+            claim (str): The claim to validate.
 
         Returns:
-            Sanitized claim
+            str: The sanitized claim.
 
         Raises:
-            ValueError: If claim is invalid
+            ValueError: If the claim is empty, whitespace-only, or exceeds the maximum length.
         """
         if not claim or not claim.strip():
             raise ValueError("Claim cannot be empty or whitespace only")
@@ -169,17 +187,23 @@ class ClaimVerifier:
 
     def verify_claim(self, claim: str, enable_grounding: bool = False) -> Optional[ClaimVerificationResult]:
         """
-        Verify a given claim using the Gemini model with retry logic.
+        Verifies a single claim using the Gemini model.
+
+        This method sends a claim to the Gemini API and returns a structured verification
+        result. It includes retry logic for transient API errors.
 
         Args:
-            claim: The claim to verify
-            enable_grounding: Whether to enable Google Search grounding for fact-checking
+            claim (str): The claim to be verified.
+            enable_grounding (bool, optional): If True, enables Google Search grounding to
+                                               improve fact-checking accuracy. Defaults to False.
 
         Returns:
-            ClaimVerificationResult object with structured data, or None if an error occurred
+            Optional[ClaimVerificationResult]: A Pydantic model containing the verification
+                                               results, or None if an unrecoverable error occurs.
 
         Raises:
-            ValueError: If claim validation fails
+            ValueError: If the claim is invalid.
+            RuntimeError: If the API call fails after all retries or if the response is invalid.
         """
         # Validate claim
         try:
@@ -237,15 +261,19 @@ Provide a comprehensive verification analysis."""
         rate_limit_delay: float = 0.5
     ) -> dict[str, ClaimVerificationResult]:
         """
-        Verify multiple claims with rate limiting.
+        Verifies a batch of claims with a specified delay between requests.
 
         Args:
-            claims: List of claims to verify
-            enable_grounding: Whether to enable Google Search grounding
-            rate_limit_delay: Delay between requests in seconds (default 0.5s)
+            claims (list[str]): A list of claims to be verified.
+            enable_grounding (bool, optional): If True, enables Google Search grounding.
+                                               Defaults to False.
+            rate_limit_delay (float, optional): The delay in seconds between each API request
+                                                to avoid rate limiting. Defaults to 0.5.
 
         Returns:
-            Dictionary mapping claims to their ClaimVerificationResult objects
+            dict[str, ClaimVerificationResult]: A dictionary mapping each claim to its
+                                                verification result. Claims that failed
+                                                verification are omitted.
         """
         logger.info(f"Starting batch verification of {len(claims)} claims")
         results = {}

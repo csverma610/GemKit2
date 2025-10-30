@@ -23,22 +23,33 @@ logger = logging.getLogger(__name__)
 # --- Pydantic Models ---
 
 class MatchFeature(BaseModel):
-    """Represents a single visual feature and its match status."""
+    """
+    A Pydantic model representing a single visual feature and its match status.
+    """
     description: str
     matching: bool
     confidence: float
 
 class FeaturesResult(BaseModel):
-    """A Pydantic model for the final identification result, containing a list of features."""
+    """
+    A Pydantic model for the final identification result, containing a list of features.
+    """
     features: List[MatchFeature]
 
 
 class ObjectIdentifier:
     """
-    Identifies an object in an image by generating, checking, and scoring 
-    visual features in a single, efficient API call.
+    Identifies an object in an image by generating, checking, and scoring
+    visual features in a single, efficient API call to the Gemini model.
     """
     def __init__(self, model_name: str = "gemini-2.5-flash"):
+        """
+        Initializes the ObjectIdentifier.
+
+        Args:
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to "gemini-2.5-flash".
+        """
         if not model_name:
             raise ValueError("A valid Gemini model name must be provided.")
         self.client = self._create_client()
@@ -131,15 +142,18 @@ class ObjectIdentifier:
         """
         Identifies an object in an image using a single, comprehensive API call.
 
+        This method generates a prompt that instructs the Gemini model to first
+        generate a list of visual features for the specified object, then check
+        for the presence of those features in the image, and finally return a
+        structured JSON response with the results.
+
         Args:
-            image_path: The path or URL to the image file.
-            object_name: The name of the object to identify.
+            image_path (str): The path or URL to the image file.
+            object_name (str): The name of the object to identify.
 
         Returns:
-            A FeaturesResult object containing the detailed analysis.
-
-        Raises:
-            ValueError: If object_name or image_path is empty or invalid.
+            FeaturesResult: A Pydantic model containing the detailed analysis of
+                            the visual features.
         """
         # Validate inputs
         if not object_name or not object_name.strip():

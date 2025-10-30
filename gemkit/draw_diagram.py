@@ -5,8 +5,14 @@ from typing import Dict, Any, List, Tuple
 
 
 class DiagramDrawer:
+    """
+    A class for drawing diagrams on a canvas based on a JSON specification.
+
+    This class provides methods for loading a diagram specification from a JSON file,
+    drawing various shapes on a canvas, and saving the resulting diagram as an image.
+    """
     def __init__(self):
-        """Initialize the diagram drawer."""
+        """Initializes the DiagramDrawer."""
         self.font = self._load_font()
         
     def _load_font(self, size: int = 14):
@@ -32,13 +38,13 @@ class DiagramDrawer:
     
     def load_specification(self, json_path: str) -> Dict[str, Any]:
         """
-        Load diagram specification from JSON file.
-        
+        Loads a diagram specification from a JSON file.
+
         Args:
-            json_path: Path to JSON specification file
-            
+            json_path (str): The path to the JSON file containing the diagram specification.
+
         Returns:
-            Dictionary containing diagram specifications
+            Dict[str, Any]: A dictionary representing the diagram specification.
         """
         print(f"Loading specification from: {json_path}")
         
@@ -59,11 +65,14 @@ class DiagramDrawer:
     
     def draw_diagram(self, spec: Dict[str, Any], output_path: str):
         """
-        Draw the diagram based on the JSON specification.
-        
+        Draws a diagram based on a provided specification.
+
+        This method creates a canvas and iterates through the shapes in the specification,
+        drawing each one on the canvas. The resulting diagram is then saved to a file.
+
         Args:
-            spec: Diagram specification dictionary
-            output_path: Path to save the output image
+            spec (Dict[str, Any]): A dictionary representing the diagram specification.
+            output_path (str): The path to save the output image file.
         """
         print(f"\nDrawing diagram...")
         
@@ -417,11 +426,12 @@ class DiagramDrawer:
     
     def load_and_draw(self, json_path: str, output_path: str):
         """
-        Complete pipeline: load JSON and draw diagram.
-        
+        A convenience method that loads a diagram specification from a JSON file
+        and then draws the diagram.
+
         Args:
-            json_path: Path to JSON specification
-            output_path: Path to save output image
+            json_path (str): The path to the JSON file containing the diagram specification.
+            output_path (str): The path to save the output image file.
         """
         spec = self.load_specification(json_path)
         self.draw_diagram(spec, output_path)

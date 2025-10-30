@@ -12,21 +12,33 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DetectionProcessorConfig:
-    """Configuration for processing detection results."""
+    """
+    Configuration for the DetectionProcessor.
+
+    Attributes:
+        output_dir (str): The directory to save the annotated images.
+        annotated_image_prefix (str): The prefix for the annotated image filenames.
+        one_object_per_image (bool): If True, save a separate image for each detected object.
+    """
     output_dir: str = "annotated_images"
     annotated_image_prefix: str = "detected"
     one_object_per_image: bool = False
 
 
 class DetectionProcessor:
-    """Handles rendering, annotation, and saving of detection results."""
+    """
+    Processes the results of an object detection, including annotating
+    and saving the images.
+    """
 
     def __init__(self, config: Optional[DetectionProcessorConfig] = None):
         """
-        Initialize the processor.
+        Initializes the DetectionProcessor.
 
         Args:
-            config: Optional configuration object.
+            config (Optional[DetectionProcessorConfig], optional): A configuration object.
+                                                                    If not provided, default
+                                                                    settings are used.
         """
         self.config = config or DetectionProcessorConfig()
 
@@ -80,13 +92,18 @@ class DetectionProcessor:
         image_source: str,
     ) -> List[str]:
         """
-        Draw bounding boxes on the image and save it.
+        Draws bounding boxes on an image and saves the result.
 
-        If config.one_object_per_image is True, save one image per object.
-        Otherwise, draw all boxes on a single image.
+        This method can either draw all bounding boxes on a single image or create
+        a separate image for each detected object, depending on the configuration.
+
+        Args:
+            pil_image (Image.Image): The original image.
+            detection_result (Dict[str, Any]): The object detection results.
+            image_source (str): The original source of the image (for naming the output file).
 
         Returns:
-            A list of paths to the saved annotated images.
+            List[str]: A list of paths to the saved annotated images.
         """
         saved_paths = []
         objects = detection_result.get('detected_objects', [])

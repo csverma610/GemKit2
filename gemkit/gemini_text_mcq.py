@@ -7,7 +7,9 @@ import string # Imported for generating option IDs (A, B, C, ...) from a list
 # --- Pydantic Structured Data Schemas for Analysis Output ---
 
 class AnswerOption(BaseModel):
-    """Schema for a single answer choice analyzed by the model."""
+    """
+    A Pydantic model representing a single answer option in a multiple-choice question.
+    """
     id: str = Field(description="A single letter identifier for the choice (e.g., 'A', 'B', 'C', 'D').")
     text: str = Field(description="The text of the answer choice.")
     # The justification field is where the model explains why this choice is correct or incorrect.
@@ -16,7 +18,9 @@ class AnswerOption(BaseModel):
     choice_confidence_score: float = Field(description="The model's confidence (0.0 to 1.0) that this specific choice is the correct answer to the question.")
 
 class MCQResponse(BaseModel):
-    """The complete structured output report for analyzing and answering a single MCQ. Supports multiple correct answers."""
+    """
+    A Pydantic model representing the complete structured analysis of a multiple-choice question.
+    """
     # UPDATED: Now a list of IDs to support single or multiple correct answers.
     correct_answer_ids: list[str] = Field(description="The list of IDs (e.g., ['A', 'C']) corresponding to the choices the model determined to be correct.")
     explanation: str = Field(description="A concise summary of the core concept and why the correct answer(s) are the solution.")
@@ -27,11 +31,20 @@ class MCQResponse(BaseModel):
 
 class MCQAnalyzer:
     """
-    A class to interact with the Gemini API to analyze a given multiple-choice
-    question and return a structured answer with justifications and confidence scores.
+    Analyzes and answers multiple-choice questions using the Gemini API.
+
+    This class sends a multiple-choice question and its options to the Gemini
+    model and receives a structured response that includes the correct answer,
+    a detailed explanation, and a confidence score.
     """
     def __init__(self, model_name: str = "gemini-2.5-flash"):
-        """Initializes the Gemini client and configuration."""
+        """
+        Initializes the MCQAnalyzer.
+
+        Args:
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to "gemini-2.5-flash".
+        """
         self.model_name = model_name
         self.SYSTEM_INSTRUCTION = (
             "You are an expert academic tutor. Your task is to analyze a single provided multiple "
@@ -49,16 +62,19 @@ class MCQAnalyzer:
 
     def analyze_mcq(self, question: str, choices: dict[str, str] | list[str], is_multiple_select: bool = False) -> MCQResponse | None:
         """
-        Analyzes a single MCQ by sending it to the model for structured answering.
-        
+        Analyzes a single multiple-choice question.
+
         Args:
-            question: The text of the question.
-            choices: A dictionary mapping the choice ID (str) to the choice text (str)
-                     OR a list of strings (the choice texts).
-            is_multiple_select: Set to True if the question allows for multiple correct answers.
-            
+            question (str): The text of the question.
+            choices (dict[str, str] | list[str]): The answer choices, provided as either a
+                                                  dictionary mapping option IDs to text, or a
+                                                  list of strings.
+            is_multiple_select (bool, optional): Whether the question allows multiple
+                                                 correct answers. Defaults to False.
+
         Returns:
-            A MCQResponse object with the structured answer, or None if the call fails.
+            MCQResponse | None: A Pydantic model containing the structured analysis,
+                                or None if the API call fails.
         """
         if not self.client:
             return None
@@ -127,7 +143,12 @@ class MCQAnalyzer:
         return None
 
     def display_results(self, analysis: MCQResponse):
-        """Prints the raw JSON and the structured, validated analysis."""
+        """
+        Prints the analysis results in a human-readable format.
+
+        Args:
+            analysis (MCQResponse): The structured analysis to display.
+        """
 
         print("\n--- Raw JSON Response Text ---")
         print(getattr(self, 'json_text', 'No raw JSON available.'))

@@ -8,19 +8,38 @@ from PIL import Image
 from image_source import ImageSource
 
 class GeminiImageEditor:
+    """
+    Edits images using the Google Gemini API.
+
+    This class provides a high-level interface for loading an image, sending it to
+    the Gemini API with a text prompt, and saving the edited image.
+    """
     DEFAULT_MODEL = "gemini-2.5-flash-image"
 
     def __init__(self, model_name: str = DEFAULT_MODEL):
         """
-        Initializes the Gemini client.
+        Initializes the GeminiImageEditor.
+
+        Args:
+            model_name (str, optional): The name of the Gemini model to use.
+                                        Defaults to "gemini-2.5-flash-image".
         """
         self.model_name = model_name
         self._create_client()
 
     def edit_image(self, source: str, prompt: str, output_filename: str = "edited_image.png") -> dict:
         """
-        Loads an image from a source, sends it to the Gemini model for editing,
-        and saves the resulting image.
+        Loads an image, sends it to the Gemini model for editing, and saves the result.
+
+        Args:
+            source (str): The path or URL to the input image.
+            prompt (str): The text prompt describing the desired edit.
+            output_filename (str, optional): The path to save the edited image.
+                                             Defaults to "edited_image.png".
+
+        Returns:
+            dict: A dictionary containing the response text from the model and the
+                  filepath where the edited image was saved.
         """
         if not self.client:
             return {"text": "Client not initialized due to previous error.", "filepath": None}

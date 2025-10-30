@@ -36,13 +36,20 @@ class MathematicalEquationStory(BaseModel):
 
 def generate_equation_story(equation_name: str) -> MathematicalEquationStory:
     """
-    Generate a coherent narrative that explains a mathematical equation like a professional science writer.
+    Generates a narrative-driven explanation of a mathematical equation.
+
+    This function creates a detailed prompt that instructs the Gemini model to
+    write a compelling story about the specified equation, in the style of a
+    popular science magazine. The story is designed to be accessible to a
+    general audience and to convey the beauty and importance of the mathematics.
 
     Args:
-        equation_name (str): The name of the equation (e.g., "Pythagorean Theorem", "E=mc²")
+        equation_name (str): The name of the equation to be explained (e.g.,
+                             "Pythagorean Theorem", "E=mc²").
 
     Returns:
-        MathematicalEquationStory: A flowing narrative story explaining the equation
+        MathematicalEquationStory: A Pydantic model containing the generated
+                                   story and supporting materials.
     """
 
     # Initialize the Gemini client
